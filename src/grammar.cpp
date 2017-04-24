@@ -1,5 +1,5 @@
 #include "grammar.h"
-#include <strstream>
+#include <sstream>
 
 
 using namespace std;
@@ -62,7 +62,7 @@ KeywordsTerminalSymbol::KeywordsTerminalSymbol(Grammar *grammar, const std::stri
 
 void KeywordsTerminalSymbol::buildName()
 {
-  strstream os;
+  ostringstream os;
   os << "[";
   for(vector<string>::iterator it = m_keywords.begin(); it != m_keywords.end(); ++it)
   {

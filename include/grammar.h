@@ -14,6 +14,7 @@ class Symbol {
   std::string m_name;
 public:
   Symbol(Grammar *grammar, const std::string &name) : m_grammar(grammar), m_name(name) {}
+  virtual ~Symbol() {}
   Grammar *getGrammar() const { return m_grammar; }
   const std::string &getName() const { return m_name; }
   virtual bool isTerminal() const = 0;
@@ -31,7 +32,7 @@ public:
   NonTerminalSymbol(Grammar *grammar, const std::string &name) : Symbol(grammar, name) {}
   bool isTerminal() const { return false; }
   bool isConstant() const { return false; }
-  bool matches(const Token &token) const { return false; }
+  bool matches(const Token &) const { return false; }
 };
 
 class TerminalSymbol : public Symbol {
@@ -88,7 +89,7 @@ public:
   AnyTerminalSymbol(Grammar *grammar) : TerminalSymbol(grammar, "any") {}
   virtual ~AnyTerminalSymbol() {}
   bool isConstant() const { return false; }
-  bool matches(const Token &token) const { return true; }
+  bool matches(const Token &) const { return true; }
   int getConstantStrength() const { return 1; }
 };
 

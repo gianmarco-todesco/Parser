@@ -1,6 +1,6 @@
 #include "token.h"
 #include "catch.hpp"
-#include <strstream>
+#include <sstream>
 
 using namespace std;
 
@@ -28,7 +28,7 @@ TEST_CASE( "class Token" ) {
 }
 
 TEST_CASE( "ostream << Token" ) {
-  strstream ss;
+  ostringstream ss;
   ss  << Token() << "," 
       << Token(Token::T_Ident, "hello") << ","
       << Token(Token::T_Number, "123") << ","
@@ -36,8 +36,7 @@ TEST_CASE( "ostream << Token" ) {
       << Token(Token::T_Special, "'+'") << ","
       << Token(Token::T_Eol) << ","
       << Token(Token::T_Eof) << ","
-      << Token((Token::Type)123, "boh")
-      << '\0';
+      << Token((Token::Type)123, "boh");
   string expected = "EmptyToken,hello(Ident),123(Number),'hello'(QuotedString),'+'(Special),"
                     "EOL,EOF,boh(??123)";
   
@@ -101,4 +100,4 @@ TEST_CASE( "StringTokenizer 1" ) {
   };
   check("   \nhello\n\n\t\t\r\n", tokens3);
 
-};
+}

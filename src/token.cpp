@@ -1,6 +1,6 @@
 #include "token.h"
 
-#include <strstream>
+// #include <sstream>
 #include <set>
 #include <algorithm>
 #include <iostream>
@@ -60,7 +60,7 @@ namespace {
 
   bool matchNumber(const std::string &buffer, int &pos, std::string &number) {
     int startPos = pos, n = buffer.length();
-    if(!(isdigit(buffer[pos]) || buffer[pos]=='.' && pos+1<n && isdigit(buffer[pos+1])))
+    if(!(isdigit(buffer[pos]) || (buffer[pos]=='.' && pos+1<n && isdigit(buffer[pos+1]))))
       return false;
     pos++;
     while(pos<n && isdigit(buffer[pos]))pos++;
@@ -108,7 +108,7 @@ void StringTokenizer::read(vector<Token> &tokens, const std::string &buffer, int
     // skip spaces and tabs
     while(i<n && (buffer[i]==' ' || buffer[i]=='\t')) i++;
     string spaces = buffer.substr(pos,i-pos);
-    int j = i;
+    // int j = i;
     Token::Type type = Token::T_None;
     string value;
     if(i>=n) 
