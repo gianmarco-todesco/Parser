@@ -1,0 +1,26 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 11.00
+# Visual Studio 2010
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "tests", "tests\tests.vcxproj", "{240ACE69-DA6E-4496-826E-5BAE1C9AA756}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "parserlib", "parserlib\parserlib.vcxproj", "{2648D4CF-C45D-4FA6-9F90-8B840DB6278A}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		Release|Win32 = Release|Win32
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{240ACE69-DA6E-4496-826E-5BAE1C9AA756}.Debug|Win32.ActiveCfg = Debug|Win32
+		{240ACE69-DA6E-4496-826E-5BAE1C9AA756}.Debug|Win32.Build.0 = Debug|Win32
+		{240ACE69-DA6E-4496-826E-5BAE1C9AA756}.Release|Win32.ActiveCfg = Release|Win32
+		{240ACE69-DA6E-4496-826E-5BAE1C9AA756}.Release|Win32.Build.0 = Release|Win32
+		{2648D4CF-C45D-4FA6-9F90-8B840DB6278A}.Debug|Win32.ActiveCfg = Debug|Win32
+		{2648D4CF-C45D-4FA6-9F90-8B840DB6278A}.Debug|Win32.Build.0 = Debug|Win32
+		{2648D4CF-C45D-4FA6-9F90-8B840DB6278A}.Release|Win32.ActiveCfg = Release|Win32
+		{2648D4CF-C45D-4FA6-9F90-8B840DB6278A}.Release|Win32.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
