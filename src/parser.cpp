@@ -25,9 +25,9 @@ public:
 
 void ParseStateBuilder::build(const string &ntName)
 {
-  vector<Rule*> rules;
+  vector<const Rule*> rules;
   m_grammar->getRulesByLeftSymbol(rules, ntName);
-  for(vector<Rule*>::iterator it = rules.begin(); it != rules.end(); ++it)
+  for(vector<const Rule*>::iterator it = rules.begin(); it != rules.end(); ++it)
   {
     m_items.insert(make_pair((*it)->getId(), 0));
   }
@@ -68,9 +68,9 @@ void ParseStateBuilder::makeClosure(const string &ntName)
   {
     string name = todo.back();
     todo.pop_back();
-    vector<Rule*> rules;
+    vector<const Rule*> rules;
     m_grammar->getRulesByLeftSymbol(rules, name);
-    for(vector<Rule*>::iterator it = rules.begin(); it != rules.end(); ++it)
+    for(vector<const Rule*>::iterator it = rules.begin(); it != rules.end(); ++it)
     {
       m_items.insert(make_pair((*it)->getId(), 0));
       const Symbol *symbol = (*it)->getRightSymbol(0); 
@@ -96,6 +96,7 @@ void ParseStateBuilder::getItems(vector<pair<int, int> > &items)
 
 ParseState::ParseState(const Grammar *g, const string &ntName)
   : m_grammar(g)
+  , m_id(-1)
 {
   ParseStateBuilder builder(g);
   builder.build(ntName);
@@ -120,7 +121,6 @@ void ParseState::computeSignature()
   {
     ss << it->first << "," << it->second << ";";
   }
-  ss << '\0';
   m_signature = ss.str();
 }
 
@@ -182,6 +182,13 @@ ParseTable::ParseTable(const Grammar *g, const string &startNtName)
   build(startNtName);
 }
 
+ParseTable::~ParseTable()
+{
+  for(int i=0;i<(int)m_states.size();i++) delete m_states[i];
+  m_states.clear();
+}
+
+
 void ParseTable::dump()
 {
   for(int i=0;i<(int)m_states.size();i++)
@@ -226,9 +233,11 @@ void ParseTable::build(const string &startNtName)
   }
 }
 
+
+
 //=============================================================================
 
-ParseOutput::ParseOutput(BaseTokenizer *tokenizer)
+ParseOutput::ParseOutput(const BaseTokenizer *tokenizer)
   : m_tokenizer(tokenizer)
 {
 }
@@ -298,9 +307,16 @@ void ParseOutput::makeGroup(const std::string &groupName, int count, unsigned lo
   }
 
   tmpBuffer[0] = (int)tmpBuffer.size();
-
-  int k = m_stack[m_stack.size()-count];
-  m_buffer.erase(m_buffer.begin()+k, m_buffer.end());
+  int k;
+  if(count>0)
+  {
+    k = m_stack[m_stack.size()-count];
+    m_buffer.erase(m_buffer.begin()+k, m_buffer.end());
+  }
+  else
+  {
+    k = m_buffer.size();
+  }
   m_buffer.insert(m_buffer.end(), tmpBuffer.begin(), tmpBuffer.end());
 
   m_stack.erase(m_stack.begin()+h, m_stack.end());
@@ -338,22 +354,55 @@ ParseOutputNode ParseOutput::getChildNode(const ParseOutputNode &node, int child
   return getNodeByPosition(k);
 }
 
+namespace {
 
+void serialize(
+  ostringstream &ss, 
+  const ParseOutput &po, 
+  const ParseOutputNode &node)
+{
+  if(node.isToken())
+  {
+    Token token = node.getToken();
+    ss<<"'"<<token.getText()<<"'";
+  }
+  else
+  {
+    ss << node.getGroupName() << "(";
+    for(int i=0;i<node.getChildCount();i++)
+    {
+      if(i>0) ss<<",";
+      serialize(ss,po,po.getChildNode(node,i));      
+    }
+    ss << ")";
+  }
+}
+
+}// namespace 
+
+std::string ParseOutput::toString() const
+{
+  ostringstream ss;
+  for(int i=0;i<getCount();i++)
+  {
+    if(i>0) ss<<",";
+    serialize(ss, *this, getNode(i));
+  }
+  return ss.str();
+}
 
 //=============================================================================
 
 
-Parser::Parser(Grammar *grammar, const string &startNtName)
+Parser::Parser(const Grammar *grammar, const string &startNtName)
   : m_grammar(grammar)
   , m_parseTable(grammar, startNtName)
   , m_output(0)
 {
-  m_parseTable.dump();
-  cout << endl;
 }
 
 
-bool Parser::parse(BaseTokenizer *tokenizer)
+bool Parser::parse(const BaseTokenizer *tokenizer)
 {
   const vector<Token> &tokens = tokenizer->getTokens();
 
@@ -363,6 +412,7 @@ bool Parser::parse(BaseTokenizer *tokenizer)
   m_stack.clear();
   m_stack.push_back(m_parseTable.getFirstState());
   int pos = 0;
+  bool ret = false;
   for(;;)
   {
     const ParseState*state = m_stack.back();
@@ -383,12 +433,10 @@ bool Parser::parse(BaseTokenizer *tokenizer)
       
       if(completedRules.size()>0) 
       {
-        /*
-        cout << "Shift-reduce conflict" << endl;
-        cout << "  State S" << state->getId() << endl;
-        cout << "  shift : " << *matchedTerminals[0] << endl;
-        cout << "  reduce : " << *completedRules[0] << endl;
-        */
+        //cout << "Shift-reduce conflict" << endl;
+        //cout << "  State S" << state->getId() << endl;
+        //cout << "  shift : " << *matchedTerminals[0] << endl;
+        //cout << "  reduce : " << *completedRules[0] << endl;
       }
       const ParseState*nextState = state->getNextState(matchedTerminals[0]);
       assert(nextState);
@@ -411,7 +459,7 @@ bool Parser::parse(BaseTokenizer *tokenizer)
         const ParseState*nextState = state->getNextState(rule->getLeftSymbol());
         assert(nextState || state->getId()==0);
         if(nextState) m_stack.push_back(nextState);
-        else break;
+        else { ret = true; break; }
       }
     }
     else
@@ -421,17 +469,17 @@ bool Parser::parse(BaseTokenizer *tokenizer)
     }    
   }
 
-  cout << "Parsing finished" << endl;
-  cout << "  stack size = " << m_stack.size() << endl;
-  cout << "  pos        = " << pos << endl;
-
-  return true;
+  return ret;
 }
 
 
 void Parser::doSemanticAction(const Rule *rule)
 {
-  if(rule->getAction() == "")
+  ostringstream ss;
+  ss<<*rule;
+  string text = ss.str();
+
+  if(rule->getAction().getGroupName() == "")
   {
     int count = rule->getLength();
     int i;
@@ -446,10 +494,12 @@ void Parser::doSemanticAction(const Rule *rule)
   }
   else
   {
-    m_output->makeGroup(rule->getAction(), rule->getLength());
+    const RuleAction &action = rule->getAction();
+    m_output->makeGroup(action.getGroupName(), rule->getLength(),action.getMask());
   }
 }
 
+/*
 void Parser::skipNewLinesAndComments(const std::vector<Token> &tokens, int &pos)
 {
   const Token slash(Token::T_Special, "/");
@@ -482,3 +532,5 @@ void Parser::skipNewLinesAndComments(const std::vector<Token> &tokens, int &pos)
    
   }
 }
+
+*/

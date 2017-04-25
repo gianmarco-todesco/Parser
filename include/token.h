@@ -53,8 +53,7 @@ public:
   BaseTokenizer() : m_read(false) {}
   virtual ~BaseTokenizer() {}
 
-  // this method reads actually the tokens; returns false if could not read
-  virtual bool read() = 0;
+  virtual void readIfNeeded() = 0;
 
   const std::vector<Token> &getTokens() const { return m_tokens; } 
 
@@ -71,16 +70,17 @@ public:
 class StringTokenizer : public BaseTokenizer {
   std::string m_buffer;
 public:
-  StringTokenizer(const std::string &buffer) : m_buffer(buffer) { }
+  StringTokenizer(const std::string &buffer) : m_buffer(buffer) { 
+    read(m_tokens, m_buffer); 
+  }
   ~StringTokenizer() {}
 
   static void read(std::vector<Token> &tokens, const std::string &text, int startPos = 0);
 
+  void readIfNeeded() {}
 
   std::pair<int, int> getLineAndColumn(Token::Position tokenPosition) const;
   void dumpPosition(std::ostream &out, Token::Position tokenPosition) const;  
-
-  bool read() { read(m_tokens, m_buffer); return true; }
 };
 
 /*

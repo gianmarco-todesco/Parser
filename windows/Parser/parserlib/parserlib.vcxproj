@@ -12,11 +12,13 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\src\grammar.cpp" />
+    <ClCompile Include="..\..\..\src\grammarbuilder.cpp" />
     <ClCompile Include="..\..\..\src\parser.cpp" />
     <ClCompile Include="..\..\..\src\token.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\include\grammar.h" />
+    <ClInclude Include="..\..\..\include\grammarbuilder.h" />
     <ClInclude Include="..\..\..\include\parser.h" />
     <ClInclude Include="..\..\..\include\token.h" />
   </ItemGroup>
@@ -52,8 +54,7 @@
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
-      <PrecompiledHeader>
-      </PrecompiledHeader>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>

@@ -14,7 +14,9 @@ class ParseState {
   std::vector<const TerminalSymbol*> m_currentTerminals;
   std::vector<const Rule*> m_completeRules;
 public:
+  // Build a state with all the rule 'ntName -> @ ....'
   ParseState(const Grammar *g, const std::string &ntName);
+  // Build a next state 
   ParseState(const ParseState &other, const Symbol *symbol);
 
   const Grammar *getGrammar() const { return m_grammar; }
@@ -35,8 +37,11 @@ public:
     std::map<const Symbol*, const ParseState*>::const_iterator it = m_links.find(symbol);
     return it == m_links.end() ? 0 : it->second;
   }
-  void setNextState(const Symbol*symbol, const ParseState *nextState) { m_links[symbol] = nextState; }
+  void setNextState(const Symbol*symbol, const ParseState *nextState) { 
+    m_links[symbol] = nextState; 
+  }
 
+private:
   void postBuild();
   void computeSignature();
 };
@@ -47,16 +52,24 @@ class ParseTable {
   std::vector<ParseState*> m_states; 
 public:
   ParseTable(const Grammar *g, const std::string &startNtName);
+  ~ParseTable();
+
+  int getStateCount() const { return m_states.size(); }
+  const ParseState*getState(int index) const { return m_states[index]; }
+  const ParseState*getFirstState() const { return m_states[0]; }
+  
   void dump();
 
+private:
   void build(const std::string &startNtName);
-  const ParseState*getFirstState() const { return m_states[0]; }
 };
+
 
 class ParseOutputNode {
   Token m_token;
   int m_childCount, m_position;
 public:
+  // position referers to ParseOutput
   ParseOutputNode(int position, const Token &token) : m_token(token), m_childCount(0), m_position(position) {}
   ParseOutputNode(int position, const std::string &groupName, int childCount) : m_token(Token::T_None, groupName), m_childCount(childCount), m_position(position) {}
 
@@ -69,13 +82,13 @@ public:
 };
 
 class ParseOutput {
-  BaseTokenizer *m_tokenizer;
+  const BaseTokenizer *m_tokenizer;
   std::vector<std::string> m_nodeNames;
   std::map<std::string, int> m_nodeNameTable;
   std::vector<int> m_buffer;
   std::vector<int> m_stack;
 public:
-  ParseOutput(BaseTokenizer *tokenizer);
+  ParseOutput(const BaseTokenizer *tokenizer);
   ~ParseOutput();
 
   void addToken(int tokenIndex);
@@ -88,27 +101,33 @@ public:
   ParseOutputNode getNodeByPosition(int position) const;
   ParseOutputNode getChildNode(const ParseOutputNode &node, int childIndex) const;
 
+  std::string toString() const; // used mainly for debugging
 };
 
-
 class Parser {
-  Grammar *m_grammar;
+  const Grammar *m_grammar;
   ParseTable m_parseTable;
-
   std::vector<const ParseState*> m_stack;
   ParseOutput *m_output;
 
 public:
-  Parser(Grammar *grammar, const std::string &startNtName);
-  ~Parser() { delete m_output; }
+  Parser(const Grammar *grammar, const std::string &startNtName);
+  virtual ~Parser() { delete m_output; }
 
-  bool parse(BaseTokenizer *tokenizer);
+  const ParseTable &getParseTable() const { return m_parseTable; }
+  const Grammar *getGrammar() const { return m_grammar;}
+ 
+  bool parse(const BaseTokenizer *tokenizer);
 
   const ParseOutput *getOutput() const { return m_output; }
 
+  virtual void skipNewLinesAndComments(const std::vector<Token> &tokens, int &pos) {}
+
 private:
+
   void doSemanticAction(const Rule *rule);
-  void skipNewLinesAndComments(const std::vector<Token> &tokens, int &pos);
+
 };
+
 
 #endif

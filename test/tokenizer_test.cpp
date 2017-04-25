@@ -6,7 +6,7 @@ using namespace std;
 
 
 
-TEST_CASE( "class Token" ) {
+TEST_CASE( "class Token", "[token]" ) {
   REQUIRE(Token() == Token(Token::T_None, ""));
   REQUIRE(Token(Token::T_Special,"a") != Token(Token::T_Ident, "a"));
   REQUIRE(Token(Token::T_Ident,"pippo").getText() == "pippo");
@@ -27,7 +27,7 @@ TEST_CASE( "class Token" ) {
   REQUIRE(Token(Token::T_Special, "+") != Token(Token::T_None, "+"));
 }
 
-TEST_CASE( "ostream << Token" ) {
+TEST_CASE( "ostream << Token", "[token]" ) {
   ostringstream ss;
   ss  << Token() << "," 
       << Token(Token::T_Ident, "hello") << ","
@@ -48,9 +48,7 @@ TEST_CASE( "ostream << Token" ) {
 void check(string text, Token tokens[])
 {
   StringTokenizer st(text);
-  REQUIRE(st.getTokens().empty());
-  bool ret = st.read();
-  REQUIRE(ret);
+  REQUIRE(!st.getTokens().empty());
   int i;
   for(i=0; tokens[i] != Token(); i++) {
     REQUIRE(i<(int)st.getTokens().size());
@@ -59,7 +57,7 @@ void check(string text, Token tokens[])
   REQUIRE(i == st.getTokens().size());
 }
 
-TEST_CASE( "StringTokenizer 1" ) {
+TEST_CASE( "StringTokenizer 1", "[token]" ) {
   Token tokens1[] = {
     Token(Token::T_Ident,"uno"),
     Token(Token::T_Ident,"due"),
