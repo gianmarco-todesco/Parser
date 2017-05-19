@@ -57,38 +57,6 @@ Grammar *makeTestGrammar3()
 }
 
 
-void serialize(
-  ostringstream &ss, 
-  const ParseOutput &po, 
-  const ParseOutputNode &node)
-{
-  if(node.isToken())
-  {
-    Token token = node.getToken();
-    ss<<"'"<<token.getText()<<"'";
-  }
-  else
-  {
-    ss << node.getGroupName() << "(";
-    for(int i=0;i<node.getChildCount();i++)
-    {
-      if(i>0) ss<<",";
-      serialize(ss,po,po.getChildNode(node,i));      
-    }
-    ss << ")";
-  }
-}
-
-string toString(const ParseOutput &po)
-{
-  ostringstream ss;
-  for(int i=0;i<po.getCount();i++)
-  {
-    if(i>0) ss<<",";
-    serialize(ss,po,po.getNode(i));
-  }
-  return ss.str();
-}
 
 TEST_CASE( "ParseState1", "[parser]") {
   Grammar *g = makeTestGrammar1();
@@ -147,56 +115,105 @@ TEST_CASE( "ParseTable1", "[parser]") {
 }
 
 
-TEST_CASE( "ParseOutputNode", "[parser]") {
-  Token token(Token::T_Special, "!");
-  ParseOutputNode node1(1,token);
-  REQUIRE(node1.isToken() == true);
-  REQUIRE(node1.isGroup() == false);
-  REQUIRE(node1.getToken() == token);
-  REQUIRE(node1.getChildCount() == 0);
-  REQUIRE(node1.getPosition() == 1);
+TEST_CASE( "ParseTree", "[parser]") {
+  
+  StringTokenizer st("(2+3)*(4+5)");
+  ParseTree ptree(&st);
+  REQUIRE(ptree.getStackSize()==0);
 
-  ParseOutputNode node2(2,"Group", 3);
-  REQUIRE(node2.isToken() == false);
-  REQUIRE(node2.isGroup() == true);
-  REQUIRE(node2.getToken().getType() == Token::T_None);
-  REQUIRE(node2.getGroupName() == "Group");
-  REQUIRE(node2.getChildCount() == 3);
-  REQUIRE(node2.getPosition() == 2);
+  int k = 0;
+  for(int i=0;i<4;i++) ptree.addLeaf(k++);
+  REQUIRE(ptree.toString() == "'(','2','+','3'");  
+
+  ptree.makeNode("A",3,0x5);
+  REQUIRE(ptree.toString() == "'(',A('2','3')");
+
+  ptree.addLeaf(k++);
+  REQUIRE(ptree.toString() == "'(',A('2','3'),')'");
+
+  ptree.takeOne(3,1);
+  REQUIRE(ptree.toString() == "A('2','3')");  
+
+  for(int i=0;i<5;i++) ptree.addLeaf(k++);
+  REQUIRE(ptree.toString() == "A('2','3'),'*','(','4','+','5'");
+
+  ptree.makeNode("A",3,0x5);
+  REQUIRE(ptree.toString() == "A('2','3'),'*','(',A('4','5')");
+
+  ptree.addLeaf(k++);
+  REQUIRE(ptree.toString() == "A('2','3'),'*','(',A('4','5'),')'");
+  
+  ptree.takeOne(3,1);
+  REQUIRE(ptree.toString() == "A('2','3'),'*',A('4','5')");
+
+  ptree.makeNode("B",3,0x5);
+  REQUIRE(ptree.toString() == "B(A('2','3'),A('4','5'))");
+
+  REQUIRE(ptree.getStackSize() == 1);
+  ParseNode nodeB = ptree.getNode(0);
+
+  REQUIRE(nodeB.isLeaf() == false);
+  REQUIRE(nodeB.getToken() == Token());
+  REQUIRE(nodeB.getTag() == "B");
+  REQUIRE(nodeB.getChildCount() == 2);
+  REQUIRE(nodeB.getPosition() == 0);
+
+  ParseNode nodeA1 = nodeB.getChild(0);
+  REQUIRE(nodeA1.isLeaf() == false);
+  REQUIRE(nodeA1.getToken() == Token());
+  REQUIRE(nodeA1.getTag() == "A");
+  REQUIRE(nodeA1.getChildCount() == 2);
+  REQUIRE(nodeA1.getPosition() == 3);
+
+  ParseNode leaf = nodeA1.getChild(0);
+  REQUIRE(leaf.isLeaf() == true);
+  REQUIRE(leaf.getToken() == Token(Token::T_Number, "2"));
+  REQUIRE(leaf.getTag() == "");
+  REQUIRE(leaf.getChildCount() == 0);
+  REQUIRE(leaf.getPosition() == 6);
+
+  leaf = nodeA1.getChild(1);
+  REQUIRE(leaf.isLeaf() == true);
+  REQUIRE(leaf.getToken() == Token(Token::T_Number, "3"));
+  REQUIRE(leaf.getTag() == "");
+  REQUIRE(leaf.getChildCount() == 0);
+  REQUIRE(leaf.getPosition() == 9);
+
+  ParseNode nodeA2 = nodeB.getChild(1);
+  REQUIRE(nodeA2.isLeaf() == false);
+  REQUIRE(nodeA2.getToken() == Token());
+  REQUIRE(nodeA2.getTag() == "A");
+  REQUIRE(nodeA2.getChildCount() == 2);
+  REQUIRE(nodeA2.getPosition() == 12);
+
+  leaf = nodeA2.getChild(0);
+  REQUIRE(leaf.isLeaf() == true);
+  REQUIRE(leaf.getToken() == Token(Token::T_Number, "4"));
+  REQUIRE(leaf.getTag() == "");
+  REQUIRE(leaf.getChildCount() == 0);
+  REQUIRE(leaf.getPosition() == 15);
+
+  leaf = nodeA2.getChild(1);
+  REQUIRE(leaf.isLeaf() == true);
+  REQUIRE(leaf.getToken() == Token(Token::T_Number, "5"));
+  REQUIRE(leaf.getTag() == "");
+  REQUIRE(leaf.getChildCount() == 0);
+  REQUIRE(leaf.getPosition() == 18);  
 }
 
 TEST_CASE( "ParseOutput", "[parser]") {
-  StringTokenizer st("(2+3)*(4+5)");
-  ParseOutput po(&st);
-  REQUIRE(po.getCount()==0);
+  StringTokenizer st("thorin, balin, dwalin");
+  ParseTree ptree(&st);
+  REQUIRE(ptree.getStackSize()==0);
 
   int k = 0;
-  for(int i=0;i<4;i++) po.addToken(k++);
-  REQUIRE(toString(po) == "'(','2','+','3'");  
-
-  po.makeGroup("A",3,1+4);
-  REQUIRE(toString(po) == "'(',A('2','3')");
-
-  po.addToken(k++);
-  REQUIRE(toString(po) == "'(',A('2','3'),')'");
-
-  po.takeOne(1,3);
-  REQUIRE(toString(po) == "A('2','3')");  
-
-  for(int i=0;i<5;i++) po.addToken(k++);
-  REQUIRE(toString(po) == "A('2','3'),'*','(','4','+','5'");
-
-  po.makeGroup("A",3,1+4);
-  REQUIRE(toString(po) == "A('2','3'),'*','(',A('4','5')");
-
-  po.addToken(k++);
-  REQUIRE(toString(po) == "A('2','3'),'*','(',A('4','5'),')'");
+  for(int i=0;i<3;i++) ptree.addLeaf(k++);
+  REQUIRE(ptree.toString() == "'thorin',',','balin'");  
+  ptree.makeNode("Lst",3,0x5);
+  for(int i=0;i<2;i++) ptree.addLeaf(k++);
+  ptree.makeNode("Lst",3,0x5);
   
-  po.takeOne(1,3);
-  REQUIRE(toString(po) == "A('2','3'),'*',A('4','5')");
-
-  po.makeGroup("B",3,1+4);
-  REQUIRE(toString(po) == "B(A('2','3'),A('4','5'))");
+  REQUIRE(ptree.toString() == "Lst('thorin','balin','dwalin')");    
 }
 
 TEST_CASE( "Parser1", "[parser]") {
@@ -206,7 +223,7 @@ TEST_CASE( "Parser1", "[parser]") {
   Grammar *g = makeTestGrammar2();
   Parser parser(g,"S");
   parser.parse(&st);
-  REQUIRE(toString(*parser.getOutput()) == "add(var1(),var2(),var3())");  
+  REQUIRE(parser.getParseTree()->toString() == "add(var1(),var2(),var3())");  
   delete g;
   REQUIRE(Symbol::getTotalCount()==0);
 }
@@ -241,7 +258,7 @@ TEST_CASE( "Parser2", "[parser]") {
     StringTokenizer st(tb[i][0]);
     bool ret = parser.parse(&st);
     REQUIRE(ret == true);
-    REQUIRE(toString(*parser.getOutput()) == tb[i][1]);
+    //REQUIRE(toString(*parser.getOutput()) == tb[i][1]);
   }
 
   delete g;

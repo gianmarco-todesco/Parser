@@ -2,6 +2,7 @@
 #define PARSER_H
 
 #include "grammar.h"
+#include <ostream>
 
 class ParseState {
   const Grammar *m_grammar;
@@ -64,62 +65,81 @@ private:
   void build(const std::string &startNtName);
 };
 
+class ParseNode;
 
-class ParseOutputNode {
-  Token m_token;
-  int m_childCount, m_position;
-public:
-  // position referers to ParseOutput
-  ParseOutputNode(int position, const Token &token) : m_token(token), m_childCount(0), m_position(position) {}
-  ParseOutputNode(int position, const std::string &groupName, int childCount) : m_token(Token::T_None, groupName), m_childCount(childCount), m_position(position) {}
-
-  bool isToken() const { return m_token.getType() != Token::T_None; }
-  bool isGroup() const { return m_token.getType() == Token::T_None; }
-  const Token &getToken() const { return m_token; }
-  std::string getGroupName() const { return m_token.getText(); }
-  int getChildCount() const { return m_childCount; }
-  int getPosition() const { return m_position; }
-};
-
-class ParseOutput {
+class ParseTree {
   const BaseTokenizer *m_tokenizer;
-  std::vector<std::string> m_nodeNames;
-  std::map<std::string, int> m_nodeNameTable;
+  std::vector<std::string> m_nodeTags;
+  std::map<std::string, int> m_nodeTagTable;
   std::vector<int> m_buffer;
   std::vector<int> m_stack;
 public:
-  ParseOutput(const BaseTokenizer *tokenizer);
-  ~ParseOutput();
+  ParseTree(const BaseTokenizer *tokenizer);
+  ~ParseTree();
 
-  void addToken(int tokenIndex);
+  void addLeaf(int tokenIndex);
   void removeItems(int count);
-  void makeGroup(const std::string &groupName, int count, unsigned long mask = 0xffffffffL);
-  void takeOne(int index, int count);
+  void makeNode(const std::string &tag, int count, unsigned long mask = 0xffffffffL);
+  void takeOne(int count, int index);
   
-  int getCount() const { return (int)m_stack.size(); }
-  ParseOutputNode getNode(int index) const;
-  ParseOutputNode getNodeByPosition(int position) const;
+  int getStackSize() const { return (int)m_stack.size(); }
+
+  // get the index-th last node on the stack
+  ParseNode getNode(int index) const;
+
+  ParseNode getChildNode(const ParseNode &parent, int childIndex) const;
+  std::string getTag(const ParseNode &node) const;
+  bool isLeaf(const ParseNode &node) const;
+  int getChildCount(const ParseNode &node) const;
+  Token getToken(const ParseNode &node) const;
+
+  /*
   ParseOutputNode getChildNode(const ParseOutputNode &node, int childIndex) const;
+  */
 
   std::string toString() const; // used mainly for debugging
+  void dump(std::ostream &out) const;
+};
+
+class ParseNode {
+  const ParseTree *m_parseTree;
+  int m_position; // position refers to the tree
+public:
+
+  ParseNode() : m_parseTree(0), m_position(-1) {} // a null node
+  ParseNode(const ParseTree *tree, int position) : m_parseTree(tree), m_position(position) {}
+  ~ParseNode() {}
+
+  int getPosition() const { return m_position; }
+
+  bool isNull() const { return !m_parseTree; }
+
+  Token getToken() const { return m_parseTree->getToken(*this); }
+  ParseNode getChild(int childIndex) const { return m_parseTree->getChildNode(*this, childIndex); }
+  std::string getTag() const { return m_parseTree->getTag(*this); }
+  bool isLeaf() const { return m_parseTree->isLeaf(*this); }
+  int getChildCount() const { return m_parseTree->getChildCount(*this); }
 };
 
 class Parser {
   const Grammar *m_grammar;
   ParseTable m_parseTable;
   std::vector<const ParseState*> m_stack;
-  ParseOutput *m_output;
+  ParseTree *m_parseTree;
+  const BaseTokenizer *m_tokenizer;
 
 public:
+
   Parser(const Grammar *grammar, const std::string &startNtName);
-  virtual ~Parser() { delete m_output; }
+  virtual ~Parser() { delete m_parseTree; }
 
   const ParseTable &getParseTable() const { return m_parseTable; }
   const Grammar *getGrammar() const { return m_grammar;}
  
   bool parse(const BaseTokenizer *tokenizer);
 
-  const ParseOutput *getOutput() const { return m_output; }
+  // warning: parseTree is owned by the Parser (and it is destroyed by the parser dtor)
+  const ParseTree *getParseTree() const { return m_parseTree; }
 
   virtual void skipNewLinesAndComments(const std::vector<Token> &tokens, int &pos) {}
 

@@ -23,7 +23,7 @@ namespace {
       .t("-").t(">")
       .n("right")
       .n("action")
-      .t(eol).end(RuleAction("Rule"));
+      .t(eol).end(RuleAction("Rule", 1+8+16));
 
     RuleBuilder(g,"StmLst").n("Stm").end(RuleAction("List"));
     RuleBuilder(g,"StmLst").n("StmLst").n("Stm").end(RuleAction("List"));
@@ -60,21 +60,47 @@ GrammarDefinitionParser::~GrammarDefinitionParser()
 
 Grammar *GrammarBuilder::build(BaseTokenizer *tokenizer)
 {
+  Grammar *grammar  = new Grammar();
+
   GrammarDefinitionParser parser;
 
   bool ret = parser.parse(tokenizer);
   if(!ret) return 0;
 
-  const ParseOutput *po = parser.getOutput();
-  assert(po->getCount()==1);
-  ParseOutputNode rules = po->getNode(0);
-  assert(rules.getGroupName()=="List");
-  for(int i=0;i<rules.getChildCount();i++)
+  const ParseTree *ptree = parser.getParseTree();
+  ptree->dump(cout);
+
+  assert(ptree->getStackSize()==1);
+  ParseNode rulesNode = ptree->getNode(0);
+  assert(rulesNode.getTag()=="List");
+  for(int i=0;i<rulesNode.getChildCount();i++)
   {
-    cout << "rule" << endl;
+    ParseNode ruleNode = rulesNode.getChild(i);
+    cout << ruleNode.getTag() << endl;
+    string ntName = ruleNode.getChild(0).getToken().getText();
+    vector<Symbol*> symbols;
+
+    ParseNode right = ruleNode.getChild(1);
+    for(int j=0; j<right.getChildCount(); j++) 
+    {      
+      ParseNode item = right.getChild(j);
+      if(item.getToken().getType() == Token::T_Ident) 
+      {
+        symbols.push_back(grammar->getNonTerminal(item.getToken().getText()));
+      }
+      else
+      {
+        string text = item.getToken().getText();
+        text = text.substr(1,text.length()-2);
+        symbols.push_back(grammar->addTerminal(new TextTerminalSymbol(text)));
+      }
+    }
+
+    Rule *newRule = new Rule(grammar->getNonTerminal(ntName), symbols, RuleAction("uffa"));
+    grammar->addRule(newRule);
 
   }
 
-  return 0;
+  return grammar;
 
 }

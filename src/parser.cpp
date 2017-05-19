@@ -237,16 +237,16 @@ void ParseTable::build(const string &startNtName)
 
 //=============================================================================
 
-ParseOutput::ParseOutput(const BaseTokenizer *tokenizer)
+ParseTree::ParseTree(const BaseTokenizer *tokenizer)
   : m_tokenizer(tokenizer)
 {
 }
 
-ParseOutput::~ParseOutput()
+ParseTree::~ParseTree()
 {
 }
 
-void ParseOutput::addToken(int tokenIndex)
+void ParseTree::addLeaf(int tokenIndex)
 {
   m_stack.push_back((int)m_buffer.size());
   m_buffer.push_back(3); // size
@@ -254,7 +254,8 @@ void ParseOutput::addToken(int tokenIndex)
   m_buffer.push_back(tokenIndex);
 }
 
-void ParseOutput::removeItems(int count)
+// remove count elements from the stack; remove them also from the buffer
+void ParseTree::removeItems(int count)
 {
   assert((int)m_stack.size()>=count);
   int k = m_stack[m_stack.size()-count];
@@ -262,7 +263,8 @@ void ParseOutput::removeItems(int count)
   m_buffer.erase(m_buffer.begin()+k, m_buffer.end());
 }
 
-void ParseOutput::takeOne(int index, int count)
+// replace count elements from the stack with the index-th last element; update the buffer
+void ParseTree::takeOne(int count, int index)
 {
   assert(0<=index && index<count);
   int h = (int)m_stack.size() - count; 
@@ -276,16 +278,21 @@ void ParseOutput::takeOne(int index, int count)
   m_stack.push_back(k);
 }
 
-void ParseOutput::makeGroup(const std::string &groupName, int count, unsigned long mask)
+// remove count elements from the stack, push a node with the given tag to the stack; 
+// the node contains a number of old elements according to mask
+// update the buffer
+// update the tag table (tags are stored with their ids)
+void ParseTree::makeNode(const std::string &tag, int count, unsigned long mask)
 {
-  pair<map<string, int>::iterator, bool> res = m_nodeNameTable.insert(make_pair(groupName,  m_nodeNames.size()));
-  if(res.second) m_nodeNames.push_back(groupName);
-  int groupNameIndex = res.first->second;
+  // add the group to the 
+  pair<map<string, int>::iterator, bool> res = m_nodeTagTable.insert(make_pair(tag,  m_nodeTags.size()));
+  if(res.second) m_nodeTags.push_back(tag);
+  int tagIndex = res.first->second;
     
   vector<int> tmpBuffer;
   tmpBuffer.push_back(0);
-  tmpBuffer.push_back(groupNameIndex);
-  tmpBuffer.push_back(0);
+  tmpBuffer.push_back(tagIndex);
+  tmpBuffer.push_back(0); // child count
 
   int h = (int)m_stack.size() - count; 
   assert(h>=0);
@@ -294,7 +301,7 @@ void ParseOutput::makeGroup(const std::string &groupName, int count, unsigned lo
     if(((mask>>i)&1)==0) continue;
     int a = m_stack[h+i];
     int b = a + m_buffer[a];
-    if(m_buffer[a+1]==groupNameIndex) // left recursion
+    if(m_buffer[a+1]==tagIndex) // left recursion
     {
       tmpBuffer[2] += m_buffer[a+2];
       a+=3;
@@ -323,73 +330,123 @@ void ParseOutput::makeGroup(const std::string &groupName, int count, unsigned lo
   m_stack.push_back(k);
 }
 
-ParseOutputNode ParseOutput::getNode(int index) const
+ParseNode ParseTree::getNode(int index) const
 {
   assert(0<=index && index<(int)m_stack.size());
   int k = m_stack[index];
-  return getNodeByPosition(k);
+  return ParseNode(this,k);
 }
 
-ParseOutputNode ParseOutput::getNodeByPosition(int k) const
+ParseNode ParseTree::getChildNode(const ParseNode &parent, int childIndex) const
 {
-  assert(0<=k && k<(int)m_buffer.size());
-  int len = m_buffer[k];
-  int type = m_buffer[k+1];
-  if(type<0)
-    return ParseOutputNode(k, m_tokenizer->getTokens()[m_buffer[k+2]]);
-  else
-    return ParseOutputNode(k, m_nodeNames[type], m_buffer[k+2]);
+  int k = parent.getPosition();
+  if(0<=childIndex && childIndex<m_buffer[k+2])
+  {
+    k += 3;
+    for(int i=0;i<childIndex;i++)
+    {
+      k += m_buffer[k];
+    }
+    return ParseNode(this, k);
+  }
+  else return ParseNode();
 }
 
-
-ParseOutputNode ParseOutput::getChildNode(const ParseOutputNode &node, int childIndex) const
+std::string ParseTree::getTag(const ParseNode &node) const
 {
   int k = node.getPosition();
-  assert(0<=childIndex && childIndex<m_buffer[k+2]);
-  k += 3;
-  for(int i=0;i<childIndex;i++)
-  {
-    k += m_buffer[k];
-  }
-  return getNodeByPosition(k);
+  if(m_buffer[k+1]>=0) return m_nodeTags[m_buffer[k+1]];
+  else return "";
 }
+
+bool ParseTree::isLeaf(const ParseNode &node) const
+{
+  int k = node.getPosition();
+  return m_buffer[k+1]<0;
+}
+
+Token ParseTree::getToken(const ParseNode &node) const
+{
+  int k = node.getPosition();
+  if(m_buffer[k+1]<0)
+    return m_tokenizer->getTokens()[m_buffer[k+2]];
+  else
+    return Token();
+}
+
+int ParseTree::getChildCount(const ParseNode &node) const
+{
+  int k = node.getPosition();
+  if(m_buffer[k+1]<0) return 0;
+  else return m_buffer[k+2];
+}
+
 
 namespace {
 
-void serialize(
-  ostringstream &ss, 
-  const ParseOutput &po, 
-  const ParseOutputNode &node)
-{
-  if(node.isToken())
+  void serialize(
+    ostream &ss, 
+    const ParseNode &node)
   {
-    Token token = node.getToken();
-    ss<<"'"<<token.getText()<<"'";
-  }
-  else
-  {
-    ss << node.getGroupName() << "(";
-    for(int i=0;i<node.getChildCount();i++)
+    if(node.isLeaf())
     {
-      if(i>0) ss<<",";
-      serialize(ss,po,po.getChildNode(node,i));      
+      Token token = node.getToken();
+      ss << "'" << token.getText() << "'";
     }
-    ss << ")";
+    else
+    {
+      ss << node.getTag().c_str() << "(";
+      for(int i=0;i<node.getChildCount();i++)
+      {
+        if(i>0) ss<<",";
+        serialize(ss, node.getChild(i));      
+      }
+      ss << ")";
+    }
   }
-}
+
+  void dump(
+    ostream &out,
+    int level,
+    const ParseNode &node)
+  {
+    for(int i=0;i<level;i++) out << "    ";
+    if(node.isLeaf())
+    {
+      out << "'"<<node.getToken().getText()<<"'\n";
+    }
+    else
+    {
+      out << node.getTag().c_str() << "\n";
+      for(int i=0;i<node.getChildCount();i++)
+      {
+        dump(out, level+1, node.getChild(i));  
+      }
+    }
+  }
 
 }// namespace 
 
-std::string ParseOutput::toString() const
+std::string ParseTree::toString() const
 {
   ostringstream ss;
-  for(int i=0;i<getCount();i++)
+  for(int i=0;i<getStackSize();i++)
   {
     if(i>0) ss<<",";
-    serialize(ss, *this, getNode(i));
+    serialize(ss, getNode(i));
   }
   return ss.str();
 }
+
+
+void ParseTree::dump(ostream &out) const 
+{
+  for(int i=0;i<(int)m_stack.size();i++)
+  {
+    ::dump(out, 0, getNode(i));
+  }
+}
+
 
 //=============================================================================
 
@@ -397,7 +454,7 @@ std::string ParseOutput::toString() const
 Parser::Parser(const Grammar *grammar, const string &startNtName)
   : m_grammar(grammar)
   , m_parseTable(grammar, startNtName)
-  , m_output(0)
+  , m_parseTree(0)
 {
 }
 
@@ -406,8 +463,8 @@ bool Parser::parse(const BaseTokenizer *tokenizer)
 {
   const vector<Token> &tokens = tokenizer->getTokens();
 
-  delete m_output;
-  m_output = new ParseOutput(tokenizer);
+  delete m_parseTree;
+  m_parseTree = new ParseTree(tokenizer);
 
   m_stack.clear();
   m_stack.push_back(m_parseTable.getFirstState());
@@ -441,7 +498,7 @@ bool Parser::parse(const BaseTokenizer *tokenizer)
       const ParseState*nextState = state->getNextState(matchedTerminals[0]);
       assert(nextState);
       m_stack.push_back(nextState);
-      m_output->addToken(pos);
+      m_parseTree->addLeaf(pos);
       //cout << "Shift " << tokens[pos] << endl;
       if(!tokens[pos].isEof()) pos++;
     }
@@ -487,15 +544,15 @@ void Parser::doSemanticAction(const Rule *rule)
     if(i>=count)
     {
       // no non-terminals in right-side. return "null"
-      m_output->makeGroup("_nil", count, 0);
+      m_parseTree->makeNode("_nil", count, 0);
     }
     else
-      m_output->takeOne(i, count);
+      m_parseTree->takeOne(count, i);
   }
   else
   {
     const RuleAction &action = rule->getAction();
-    m_output->makeGroup(action.getGroupName(), rule->getLength(),action.getMask());
+    m_parseTree->makeNode(action.getGroupName(), rule->getLength(),action.getMask());
   }
 }
 

@@ -5,6 +5,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "tests", "tests\tests.vcxpro
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "parserlib", "parserlib\parserlib.vcxproj", "{2648D4CF-C45D-4FA6-9F90-8B840DB6278A}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "sandbox", "sandbox\sandbox.vcxproj", "{BFAA7F2F-943F-4F22-8321-8A3C3612D493}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -19,6 +21,10 @@ Global
 		{2648D4CF-C45D-4FA6-9F90-8B840DB6278A}.Debug|Win32.Build.0 = Debug|Win32
 		{2648D4CF-C45D-4FA6-9F90-8B840DB6278A}.Release|Win32.ActiveCfg = Release|Win32
 		{2648D4CF-C45D-4FA6-9F90-8B840DB6278A}.Release|Win32.Build.0 = Release|Win32
+		{BFAA7F2F-943F-4F22-8321-8A3C3612D493}.Debug|Win32.ActiveCfg = Debug|Win32
+		{BFAA7F2F-943F-4F22-8321-8A3C3612D493}.Debug|Win32.Build.0 = Debug|Win32
+		{BFAA7F2F-943F-4F22-8321-8A3C3612D493}.Release|Win32.ActiveCfg = Release|Win32
+		{BFAA7F2F-943F-4F22-8321-8A3C3612D493}.Release|Win32.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

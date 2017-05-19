@@ -1,9 +1,9 @@
 #include "token.h"
 #include "catch.hpp"
 #include <sstream>
+#include <fstream>
 
 using namespace std;
-
 
 
 TEST_CASE( "class Token", "[token]" ) {
@@ -14,8 +14,17 @@ TEST_CASE( "class Token", "[token]" ) {
 
   Token eof(Token::T_Eof);
   REQUIRE(eof.isEof());
+  REQUIRE(!eof.isEol());
   REQUIRE(eof.getText() == "");
   REQUIRE(eof.getType() == Token::T_Eof);
+  REQUIRE(Token::Eof == eof);
+
+  Token eol(Token::T_Eol);
+  REQUIRE(!eol.isEof());
+  REQUIRE(eol.isEol());
+  REQUIRE(eol.getText() == "");
+  REQUIRE(eol.getType() == Token::T_Eol);
+  REQUIRE(Token::Eol == eol);
 
   Token token;
   token.setSpaces(" \t");
@@ -25,6 +34,7 @@ TEST_CASE( "class Token", "[token]" ) {
   REQUIRE(Token(Token::T_Special, "+") == Token(Token::T_Special, "+"));
   REQUIRE(Token(Token::T_Special, "+") != Token(Token::T_Special, "-"));
   REQUIRE(Token(Token::T_Special, "+") != Token(Token::T_None, "+"));
+
 }
 
 TEST_CASE( "ostream << Token", "[token]" ) {
@@ -45,16 +55,22 @@ TEST_CASE( "ostream << Token", "[token]" ) {
 }
 
 
-void check(string text, Token tokens[])
+void compareTokens(const std::vector<Token> &tokens, const Token refTokens[])
+{
+  int i;
+  for(i=0; refTokens[i] != Token(); i++) {
+    REQUIRE(i<(int)tokens.size());
+    REQUIRE(refTokens[i] == tokens[i]);
+  }
+  REQUIRE(i == tokens.size());
+}
+
+
+void check(string text, Token refTokens[])
 {
   StringTokenizer st(text);
-  REQUIRE(!st.getTokens().empty());
-  int i;
-  for(i=0; tokens[i] != Token(); i++) {
-    REQUIRE(i<(int)st.getTokens().size());
-    REQUIRE(tokens[i] == st.getTokens()[i]);
-  }
-  REQUIRE(i == st.getTokens().size());
+  compareTokens(st.getTokens(), refTokens);
+
 }
 
 TEST_CASE( "StringTokenizer 1", "[token]" ) {
@@ -97,5 +113,33 @@ TEST_CASE( "StringTokenizer 1", "[token]" ) {
     Token()
   };
   check("   \nhello\n\n\t\t\r\n", tokens3);
+
+}
+
+
+TEST_CASE( "FileTokenizer 1", "[token]" ) {
+  string fn("test.txt");
+  {
+    ofstream fs(fn);
+    fs << "uno due\n tre\n4";
+  }
+  FileTokenizer ft;
+  REQUIRE(ft.read("does_not_exist.txt")==false);
+  bool ret = ft.read(fn);
+  REQUIRE(ret);
+
+  Token tokens1[] = {
+    Token(Token::T_Ident,"uno"),
+    Token(Token::T_Ident,"due"),
+    Token::Eol,
+    Token(Token::T_Ident,"tre"),
+    Token::Eol,
+    Token(Token::T_Number,"4"),
+    Token::Eol,
+    Token::Eof,
+    Token()
+  };
+  compareTokens(ft.getTokens(), tokens1);
+
 
 }

@@ -30,6 +30,10 @@ Token::~Token()
 {
 }
 
+const Token Token::Eof(Token::T_Eof);
+const Token Token::Eol(Token::T_Eol);
+
+
 std::ostream &operator<<(std::ostream &out, const Token &token) 
 {
   switch(token.getType())
@@ -174,6 +178,49 @@ void StringTokenizer::dumpPosition(std::ostream &out, Token::Position tokenPosit
   out << "^" << endl;  
 }
 
+//-----------------------------------------------------------------------------
+
+string FileTokenizer::getLocation(long int tokenPos) const
+{
+  return "";
+}
+
+
+bool FileTokenizer::read(const std::string &filepath)
+{
+  m_filepath = filepath;
+  m_lines.clear();
+  m_tokens.clear();
+  ifstream f(m_filepath.c_str());
+  if(!f) return false;
+  std::string text;
+  int tokenPos = 0;
+  int lineNumber = 0;
+  while(std::getline(f,text)) 
+  {
+    m_lines.push_back(make_pair(tokenPos, lineNumber));
+    StringTokenizer::read(m_tokens, text, tokenPos);
+    tokenPos = m_tokens.back().getPosition();
+    m_tokens.pop_back();
+    m_tokens.push_back(Token::Eol);
+    m_tokens.back().setPosition(tokenPos);
+    tokenPos++;
+    lineNumber++;
+  }
+  m_tokens.push_back(Token::Eof);
+  return true;
+}
+
+
+pair<int, int> FileTokenizer::getLineAndColumn(Token::Position tokenPosition) const
+{
+  return make_pair(0,0);
+}
+
+void FileTokenizer::dumpPosition(std::ostream &out, Token::Position tokenPosition) const
+{
+}
+
 /*
 std::string StringTokenizer::getLocation(long int tokenPos) const
 {
@@ -186,19 +233,7 @@ std::string StringTokenizer::getLocation(long int tokenPos) const
 
 void FileTokenizer::read()
 {
-  ifstream f(m_filepath.c_str());
-  std::string text;
-  int tokenPos = 0;
-  int lineNumber = 0;
-  while(std::getline(f,text)) 
-  {
-    m_lines.push_back(make_pair(tokenPos, lineNumber));
-    StringTokenizer::read(m_tokens, text, tokenPos);
-    m_tokens.back().convertEofToEol();
-    tokenPos = m_tokens.back().getPosition() + 1;
-    lineNumber++;
-  }
-  m_tokens.push_back(Token::Eof);
+  
 }
 
 //-----------------------------------------------------------------------------

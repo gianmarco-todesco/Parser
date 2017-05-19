@@ -11,7 +11,7 @@ public:
 
   typedef long int Position;
 
-  Token(); // a T_None-Token
+  Token(); // initialize a T_None-Token
   Token(Type type, const std::string &text = "");
   ~Token();
 
@@ -32,7 +32,7 @@ public:
   bool operator==(const Token &other) const { return m_type == other.m_type && m_text == other.m_text; }
   bool operator!=(const Token &other) const { return m_type != other.m_type || m_text != other.m_text; }
 
-  void convertEofToEol() { if(m_type==T_Eof) m_type = T_Eol; } 
+  static const Token Eof, Eol;
 
 private:
   Type m_type;
@@ -53,8 +53,6 @@ public:
   BaseTokenizer() : m_read(false) {}
   virtual ~BaseTokenizer() {}
 
-  virtual void readIfNeeded() = 0;
-
   const std::vector<Token> &getTokens() const { return m_tokens; } 
 
   // return line and columns of the given token position
@@ -66,6 +64,7 @@ public:
 
 //
 // single string tokenizer
+// (the token sequence is terminates with an EOF)
 //
 class StringTokenizer : public BaseTokenizer {
   std::string m_buffer;
@@ -77,25 +76,29 @@ public:
 
   static void read(std::vector<Token> &tokens, const std::string &text, int startPos = 0);
 
-  void readIfNeeded() {}
-
   std::pair<int, int> getLineAndColumn(Token::Position tokenPosition) const;
   void dumpPosition(std::ostream &out, Token::Position tokenPosition) const;  
 };
 
-/*
 
+//
+// file tokenizer
+// (each line is terminated with an EOL; the whole sequence is terminates with an EOF)
+// (note: the last line is always terminates with EOL, therefore the last two tokens are always EOL EOF)
+//
 class FileTokenizer : public BaseTokenizer {
-  const std::string m_filepath;
-  std::vector<std::pair<int, int> > m_lines; // (line first token position, lineNumber)
+  std::string m_filepath;
+  std::vector<std::pair<Token::Position, int> > m_lines;
+  // position of the first token of the line; line number (first line => 1)
 public:
-  FileTokenizer(const std::string &filepath) : m_filepath(filepath) {}
+  FileTokenizer() {}
   ~FileTokenizer() {}
-  void read();
-  std::string getLocation(long int tokenPos) const;
-};
-*/
+  bool read(const std::string &filepath);
 
+  std::string getLocation(long int tokenPos) const;
+  std::pair<int, int> getLineAndColumn(Token::Position tokenPosition) const;
+  void dumpPosition(std::ostream &out, Token::Position tokenPosition) const;  
+};
 
 #endif
 

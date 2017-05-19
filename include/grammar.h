@@ -8,7 +8,6 @@
 
 class Grammar;
 
-
 class Symbol {
   std::string m_name;
   static int m_totalCount;
