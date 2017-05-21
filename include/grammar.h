@@ -160,6 +160,8 @@ public:
 
   void getRulesByLeftSymbol(std::vector<const Rule*> &rules, const std::string &leftSymbolName) const;
 
+  void dump(std::ostream &out) const;
+
 private:
   // Symbol *getSymbol(ITokenizer *tokenizer);
 };

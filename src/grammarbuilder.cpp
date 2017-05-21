@@ -11,6 +11,8 @@ namespace {
     Grammar *g = new Grammar();
     TerminalSymbol *ident = g->addTerminal(
       new TokenTypeTerminalSymbol("ident", Token::T_Ident));
+    TerminalSymbol *number = g->addTerminal(
+      new TokenTypeTerminalSymbol("number", Token::T_Number));
     TerminalSymbol *qstring = g->addTerminal(
       new TokenTypeTerminalSymbol("qstring", Token::T_QuotedString));
     TerminalSymbol *eol = g->addTerminal(
@@ -19,11 +21,7 @@ namespace {
       new TokenTypeTerminalSymbol("EOF", Token::T_Eof));
 
     RuleBuilder(g,"Stm")
-      .t(ident)
-      .t("-").t(">")
-      .n("right")
-      .n("action")
-      .t(eol).end(RuleAction("Rule", 1+8+16));
+      .t(ident).t("-").t(">").n("right").n("action").t(eol).end(RuleAction("Rule", 0x19));
 
     RuleBuilder(g,"StmLst").n("Stm").end(RuleAction("List"));
     RuleBuilder(g,"StmLst").n("StmLst").n("Stm").end(RuleAction("List"));
@@ -33,7 +31,12 @@ namespace {
     RuleBuilder(g,"right").n("right").t(qstring).end(RuleAction("Right"));
     
     RuleBuilder(g,"action").end();
-    
+    RuleBuilder(g,"action").t(":").t(ident).end(RuleAction("Action",0x2));
+    RuleBuilder(g,"action").t(":").t(ident).t("(").n("IntLst").t(")").end(RuleAction("Action",0xA));
+
+    RuleBuilder(g,"IntLst").t(number).end(RuleAction("IntLst"));
+    RuleBuilder(g,"IntLst").n("IntLst").t(",").t(number).end(RuleAction("IntLst",0x5));
+
     RuleBuilder(g,"S").n("StmLst").t(eof).end();
 
 
@@ -47,7 +50,7 @@ namespace {
 GrammarDefinitionParser::GrammarDefinitionParser()
   : Parser(makeGrammarDefinitionGrammar(), "S")
 {
-
+  getParseTable().dump();
 }
 
 
@@ -61,14 +64,12 @@ GrammarDefinitionParser::~GrammarDefinitionParser()
 Grammar *GrammarBuilder::build(BaseTokenizer *tokenizer)
 {
   Grammar *grammar  = new Grammar();
-
   GrammarDefinitionParser parser;
 
   bool ret = parser.parse(tokenizer);
   if(!ret) return 0;
 
   const ParseTree *ptree = parser.getParseTree();
-  ptree->dump(cout);
 
   assert(ptree->getStackSize()==1);
   ParseNode rulesNode = ptree->getNode(0);
@@ -95,6 +96,9 @@ Grammar *GrammarBuilder::build(BaseTokenizer *tokenizer)
         symbols.push_back(grammar->addTerminal(new TextTerminalSymbol(text)));
       }
     }
+
+    ParseNode action = ruleNode.getChild(2);
+
 
     Rule *newRule = new Rule(grammar->getNonTerminal(ntName), symbols, RuleAction("uffa"));
     grammar->addRule(newRule);

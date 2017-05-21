@@ -41,7 +41,10 @@ void ParseStateBuilder::build(const ParseState &other, const Symbol *symbol)
   for(vector<pair<int, int> >::const_iterator it = otherItems.begin(); it != otherItems.end(); ++it)
   {
     const Rule *rule = m_grammar->getRule(it->first);
-    if(rule->getRightSymbol(it->second) == symbol)
+    const Symbol *dotSymbol = rule->getRightSymbol(it->second);
+    if(!dotSymbol) continue;
+    if(dotSymbol->isTerminal() != symbol->isTerminal()) continue;
+    if(dotSymbol->getName() == symbol->getName())
     {
       m_items.insert(make_pair(it->first, it->second+1));
     }
@@ -189,7 +192,7 @@ ParseTable::~ParseTable()
 }
 
 
-void ParseTable::dump()
+void ParseTable::dump() const
 {
   for(int i=0;i<(int)m_states.size();i++)
   {
@@ -455,6 +458,7 @@ Parser::Parser(const Grammar *grammar, const string &startNtName)
   : m_grammar(grammar)
   , m_parseTable(grammar, startNtName)
   , m_parseTree(0)
+  , m_tokenizer(0)
 {
 }
 
@@ -479,6 +483,8 @@ bool Parser::parse(const BaseTokenizer *tokenizer)
 
     skipNewLinesAndComments(tokens, pos);
 
+    cout << tokens[pos] << endl;
+
     for(vector<const TerminalSymbol*>::const_iterator it = terminals.begin(); it != terminals.end(); ++it)
     {
       if((*it)->matches(tokens[pos])) matchedTerminals.push_back(*it);
@@ -494,6 +500,7 @@ bool Parser::parse(const BaseTokenizer *tokenizer)
         //cout << "  State S" << state->getId() << endl;
         //cout << "  shift : " << *matchedTerminals[0] << endl;
         //cout << "  reduce : " << *completedRules[0] << endl;
+        // tokenizer->dumpPosition(cout, pos);
       }
       const ParseState*nextState = state->getNextState(matchedTerminals[0]);
       assert(nextState);
@@ -522,6 +529,11 @@ bool Parser::parse(const BaseTokenizer *tokenizer)
     else
     {
       cout << "Syntax error" << endl;
+      cout << "expected one of:";
+      for(int i=0;i<(int)terminals.size();i++) cout << terminals[i]->getName() << " ";
+      cout << endl;
+      cout << "Found " << tokenizer->getTokens()[pos] << endl;
+      tokenizer->dumpPosition(cout, pos);
       break;
     }    
   }

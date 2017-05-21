@@ -240,6 +240,16 @@ void Grammar::getRulesByLeftSymbol(std::vector<const Rule*> &rules, const std::s
   }
 }
 
+void Grammar::dump(ostream &out) const
+{
+  for(int i=0;i<getRuleCount();i++)
+  {
+    const Rule *rule = getRule(i);
+    out << *rule << endl;
+  }
+}
+
+
 
 RuleBuilder::RuleBuilder(Grammar *g, const std::string &leftSymbolName)
   : m_grammar(g)

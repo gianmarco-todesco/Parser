@@ -6,7 +6,7 @@
 using namespace std;
 
 
-int main()
+int main2()
 {
   StringTokenizer st(
       "E->T\n"
@@ -32,5 +32,20 @@ int main()
   }
   ptree->dump(cout);
   
+  return 0;
+}
+
+int main()
+{
+  GrammarBuilder gb;
+
+  StringTokenizer st(
+    "E -> ident ident : foo(1,2)     \n"
+  );
+
+  Grammar *g = gb.build(&st);
+
+  g->dump(cout);
+
   return 0;
 }

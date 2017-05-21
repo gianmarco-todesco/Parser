@@ -59,7 +59,7 @@ public:
   const ParseState*getState(int index) const { return m_states[index]; }
   const ParseState*getFirstState() const { return m_states[0]; }
   
-  void dump();
+  void dump() const;
 
 private:
   void build(const std::string &startNtName);
@@ -142,6 +142,7 @@ public:
   const ParseTree *getParseTree() const { return m_parseTree; }
 
   virtual void skipNewLinesAndComments(const std::vector<Token> &tokens, int &pos) {}
+
 
 private:
 
