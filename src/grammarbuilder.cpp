@@ -27,6 +27,7 @@ namespace {
     RuleBuilder(g,"StmLst").n("StmLst").n("Stm").end(RuleAction("List"));
     
     RuleBuilder(g,"right").end(RuleAction("Right"));
+    RuleBuilder(g,"right").n("right").t("ident").end(RuleAction("Right"));
     RuleBuilder(g,"right").n("right").t(ident).end(RuleAction("Right"));
     RuleBuilder(g,"right").n("right").t(qstring).end(RuleAction("Right"));
     
@@ -50,7 +51,7 @@ namespace {
 GrammarDefinitionParser::GrammarDefinitionParser()
   : Parser(makeGrammarDefinitionGrammar(), "S")
 {
-  getParseTable().dump();
+  // getParseTable().dump();
 }
 
 
@@ -87,6 +88,7 @@ Grammar *GrammarBuilder::build(BaseTokenizer *tokenizer)
       ParseNode item = right.getChild(j);
       if(item.getToken().getType() == Token::T_Ident) 
       {
+        
         symbols.push_back(grammar->getNonTerminal(item.getToken().getText()));
       }
       else

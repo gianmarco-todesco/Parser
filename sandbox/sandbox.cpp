@@ -47,5 +47,18 @@ int main()
 
   g->dump(cout);
 
+  Parser parser(g, "E");
+  parser.getParseTable().dump();
+
+  StringTokenizer text("pluto paperino");
+  bool ret = parser.parse(&text);
+  if(ret)
+  {
+    const ParseTree *parseTree = parser.getParseTree();
+    parseTree->dump(cout);
+
+  }
+
+
   return 0;
 }

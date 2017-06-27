@@ -483,7 +483,7 @@ bool Parser::parse(const BaseTokenizer *tokenizer)
 
     skipNewLinesAndComments(tokens, pos);
 
-    cout << tokens[pos] << endl;
+    // cout << tokens[pos] << endl;
 
     for(vector<const TerminalSymbol*>::const_iterator it = terminals.begin(); it != terminals.end(); ++it)
     {
