@@ -72,13 +72,15 @@ Grammar *GrammarBuilder::build(BaseTokenizer *tokenizer)
 
   const ParseTree *ptree = parser.getParseTree();
 
+  //ptree->dump(cout);
+
   assert(ptree->getStackSize()==1);
   ParseNode rulesNode = ptree->getNode(0);
   assert(rulesNode.getTag()=="List");
   for(int i=0;i<rulesNode.getChildCount();i++)
   {
     ParseNode ruleNode = rulesNode.getChild(i);
-    cout << ruleNode.getTag() << endl;
+    // cout << ruleNode.getTag() << endl;
     string ntName = ruleNode.getChild(0).getToken().getText();
     vector<Symbol*> symbols;
 
@@ -88,8 +90,12 @@ Grammar *GrammarBuilder::build(BaseTokenizer *tokenizer)
       ParseNode item = right.getChild(j);
       if(item.getToken().getType() == Token::T_Ident) 
       {
-        
-        symbols.push_back(grammar->getNonTerminal(item.getToken().getText()));
+        if(item.getToken().getText() == "ident")
+        {
+          symbols.push_back(grammar->addTerminal(new TokenTypeTerminalSymbol("ident", Token::T_Ident)));
+        }
+        else
+          symbols.push_back(grammar->getNonTerminal(item.getToken().getText()));
       }
       else
       {
@@ -100,12 +106,27 @@ Grammar *GrammarBuilder::build(BaseTokenizer *tokenizer)
     }
 
     ParseNode action = ruleNode.getChild(2);
+    string actionName = action.getChild(0).getToken().getText();
+    int mask = 0;
+    if(action.getChildCount()==2)
+    {
+      ParseNode argLst = action.getChild(1);
+      for(int i=0;i<argLst.getChildCount();i++)
+      {
+        ParseNode arg = argLst.getChild(i);
+        string v = arg.getToken().getText();
+        int k = stoi(v, 0) - 1;
+        mask |= 1<<k;
+      }
+    }
+    RuleAction ruleAction(actionName, mask);
 
-
-    Rule *newRule = new Rule(grammar->getNonTerminal(ntName), symbols, RuleAction("uffa"));
+    Rule *newRule = new Rule(grammar->getNonTerminal(ntName), symbols, ruleAction);
     grammar->addRule(newRule);
 
   }
+
+
 
   return grammar;
 

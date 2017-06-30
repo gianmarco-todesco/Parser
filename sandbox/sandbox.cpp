@@ -40,25 +40,53 @@ int main()
   GrammarBuilder gb;
 
   StringTokenizer st(
-    "E -> ident ident : foo(1,2)     \n"
+    "StmLst -> : pass(1)\n"
+    "StmLst -> StmLst Stm : pass(1,2)\n"
+    "Stm -> type vLst ';': decl(1,2)\n"
+    "type -> 'int' : int\n"
+    "type -> 'char' : char\n"
+    "vLst -> var : pass(1)\n"
+    "vLst -> vLst ',' var : pass(1,3)\n"
+    "var -> ident : var(1)\n"
+    "var -> '*' var : star(2)\n"
+    "var -> var '[' ident ']': braket(1,3)\n"
   );
 
   Grammar *g = gb.build(&st);
 
-  g->dump(cout);
+  TerminalSymbol *eof = g->addTerminal(
+      new TokenTypeTerminalSymbol("EOF", Token::T_Eof));
+  RuleBuilder(g,"S").n("StmLst").t(eof).end();
 
-  Parser parser(g, "E");
-  parser.getParseTable().dump();
 
-  StringTokenizer text("pluto paperino");
+  //g->dump(cout);
+
+  Parser parser(g, "S");
+  //parser.getParseTable().dump();
+
+  int m = 500000;
+
+  char *buffer = new char[m+1000];
+  char *unit = "int x; char *s, buffer[size];";
+  int i = 0;
+  while(i + strlen(unit) < m) { strcpy( buffer+i, unit); i += strlen(unit); }
+
+  cout << "Start" << endl;
+
+  // StringTokenizer text("int x; char *s, buffer[size];");
+  StringTokenizer text(buffer);
   bool ret = parser.parse(&text);
   if(ret)
   {
+    cout << "Parsed ok " << endl;
     const ParseTree *parseTree = parser.getParseTree();
-    parseTree->dump(cout);
+    cout << "parse tree ok " << endl;
+    // parseTree->dump(cout);
+    cout << parseTree->getNode(0).getChildCount() << endl;
 
   }
 
+  
 
   return 0;
 }

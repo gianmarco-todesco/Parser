@@ -243,6 +243,7 @@ void ParseTable::build(const string &startNtName)
 ParseTree::ParseTree(const BaseTokenizer *tokenizer)
   : m_tokenizer(tokenizer)
 {
+  //m_buffer.reserve(1000000);
 }
 
 ParseTree::~ParseTree()
@@ -293,6 +294,7 @@ void ParseTree::makeNode(const std::string &tag, int count, unsigned long mask)
   int tagIndex = res.first->second;
     
   vector<int> tmpBuffer;
+  //tmpBuffer.reserve(1000);
   tmpBuffer.push_back(0);
   tmpBuffer.push_back(tagIndex);
   tmpBuffer.push_back(0); // child count
