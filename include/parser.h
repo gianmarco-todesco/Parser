@@ -7,8 +7,8 @@
 class ParseState {
   const Grammar *m_grammar;
   int m_id;
-  std::vector<std::pair<int, int> > m_items;
-  std::string m_signature;
+  std::vector<std::pair<int, int> > m_items; // m_items = [<rule-index, dot-pos>, ... ]
+  std::string m_signature; // m_signature is m_items in printable form (e.g. "1,0;2,0;3,1")
   std::map<const Symbol*, const ParseState*> m_links;
 
   std::vector<const Symbol*> m_currentSymbols;
@@ -52,7 +52,7 @@ class ParseTable {
   const Grammar *m_grammar;
   std::vector<ParseState*> m_states; 
 public:
-  ParseTable(const Grammar *g, const std::string &startNtName);
+  ParseTable(const Grammar *g);
   ~ParseTable();
 
   int getStateCount() const { return m_states.size(); }
@@ -62,7 +62,7 @@ public:
   void dump() const;
 
 private:
-  void build(const std::string &startNtName);
+  void build();
 };
 
 class ParseNode;
@@ -127,10 +127,11 @@ class Parser {
   std::vector<const ParseState*> m_stack;
   ParseTree *m_parseTree;
   const BaseTokenizer *m_tokenizer;
+  bool m_skipNewLines;
 
 public:
 
-  Parser(const Grammar *grammar, const std::string &startNtName);
+  Parser(const Grammar *grammar);
   virtual ~Parser() { delete m_parseTree; }
 
   const ParseTable &getParseTable() const { return m_parseTable; }
@@ -138,11 +139,13 @@ public:
  
   bool parse(const BaseTokenizer *tokenizer);
 
+  void setSkipNewLines(bool skipNewLines) { m_skipNewLines = skipNewLines; }
+
   // warning: parseTree is owned by the Parser (and it is destroyed by the parser dtor)
   const ParseTree *getParseTree() const { return m_parseTree; }
 
-  virtual void skipNewLinesAndComments(const std::vector<Token> &tokens, int &pos) {}
-
+  virtual void skipNewLinesAndComments(const std::vector<Token> &tokens, int &pos);
+  
 
 private:
 

@@ -94,6 +94,10 @@ bool KeywordsTerminalSymbol::matches(const Token &token) const
 
 Grammar::Grammar()
 {
+  m_rootSymbol = new NonTerminalSymbol("_root");
+  m_ntSymbols[m_rootSymbol->getName()] = m_rootSymbol;
+  m_eofSymbol = new TokenTypeTerminalSymbol("EOF", Token::T_Eof);
+  m_tSymbols.push_back(m_eofSymbol);
 }
 
 Grammar::~Grammar()
@@ -110,10 +114,25 @@ void Grammar::clear()
   m_tSymbols.clear();
   for(vector<Rule*>::iterator it=m_rules.begin(); it != m_rules.end(); ++it) delete *it;
   m_rules.clear();
+  m_rootSymbol = 0;
+  m_eofSymbol = 0;
+}
+
+void Grammar::updateRootRule(const NonTerminalSymbol *startSymbol)
+{
+  vector<const Symbol*> right; right.push_back(startSymbol); right.push_back(m_eofSymbol);
+  Rule *rule = new Rule(m_rootSymbol, right, RuleAction("pass",1));
+  rule->setId(0);
+  if(m_rules.empty()) m_rules.push_back(rule);
+  else 
+  {
+    delete m_rules[0];
+    m_rules[0] = rule;
+  }
 }
 
 
-NonTerminalSymbol* Grammar::getNonTerminal(const std::string &name, bool createIfNeeded)
+const NonTerminalSymbol* Grammar::getNonTerminal(const std::string &name, bool createIfNeeded)
 {
   using namespace std;
   map<string, NonTerminalSymbol*>::iterator it=m_ntSymbols.find(name);
@@ -124,110 +143,19 @@ NonTerminalSymbol* Grammar::getNonTerminal(const std::string &name, bool createI
   return nt;
 }
 
-TerminalSymbol* Grammar::addTerminal(TerminalSymbol*t)
+const TerminalSymbol* Grammar::addTerminal(TerminalSymbol*t)
 {
   m_tSymbols.push_back(t);
   return t;
 }
 
-
-/*
-class RuleBuilder {
-  Grammar *m_grammar;
-public:
-  RuleBuilder(Grammar *grammar) : m_grammar(grammar) {}
-
-  Symbol *getSymbol(const vector<Token> &tokens, int &pos);
-
-
-
-};
-
-Symbol *RuleBuilder::getSymbol(const vector<Token> &tokens, int &pos)
-{
-  Token token = tokens[pos++];
-  if(token.getType() == Token::T_Ident)
-  {
-    if(token.getText() == "number")
-      return m_grammar->addTerminal(new NumberTerminalSymbol(m_grammar));
-    else if(token.getText() == "ident")
-      return m_grammar->addTerminal(new TokenTypeTerminalSymbol(m_grammar, "ident",Token::T_Ident));
-    else if(token.getText() == "any")
-      return m_grammar->addTerminal(new AnyTerminalSymbol(m_grammar));
-    else if(token.getText() == "EOF")
-      return m_grammar->addTerminal(new TokenTypeTerminalSymbol(m_grammar, "EOF", Token::T_Eof));
-    else
-      return m_grammar->getNonTerminal(token.getText());
-  }
-  else if(token.getType() == Token::T_Special)
-  {
-    if(token.getText() == "[")
-    {
-      vector<string> keywords;
-      while(pos<(int)tokens.size())
-      {
-        token = tokens[pos++];
-        if(token.getText() == "]") break;
-        string text = token.getText();
-        if(token.getType() == Token::T_QuotedString)
-          text = text.substr(1,text.length()-2);
-        keywords.push_back(text);
-      }
-      if(keywords.empty()) return 0;
-      return m_grammar->addTerminal(new KeywordsTerminalSymbol(m_grammar, keywords));
-    }
-    else
-      return m_grammar->addTerminal(new TextTerminalSymbol(m_grammar, token.getText()));
-  }
-  else if(token.getType() == Token::T_QuotedString)
-  {
-    string text = token.getText();
-    text = text.substr(1,text.length()-2);
-    return m_grammar->addTerminal(new TextTerminalSymbol(m_grammar, text));
-  }
-  else
-    return 0;
-}
-
-*/
-/*
-
-Symbol *Grammar::getSymbol(ITokenizer *tokenizer)
-{
-
-}
-*/
-
 const Rule *Grammar::addRule(Rule *rule)
 {
+  if(m_rules.empty()) updateRootRule(rule->getLeftSymbol());
   rule->setId(m_rules.size());
   m_rules.push_back(rule);
   return rule;
 }
-
-
-/*
-const Rule *Grammar::createRule(const std::string &left, const std::string &right, const std::string &action)
-{
-  using namespace std;
-  vector<Symbol*> rightSymbols;
-  StringTokenizer st(right);
-  const vector<Token> &tokens = st.getTokens();
-  RuleBuilder rb(this);
-  int pos = 0;
-  while(pos<(int)tokens.size() && !tokens[pos].isEof())
-  {
-    Symbol*symbol = rb.getSymbol(tokens, pos);
-    if(!symbol) return 0;
-    rightSymbols.push_back(symbol);
-  }
-  Rule *rule = new Rule(getNonTerminal(left), rightSymbols);
-  rule->setId(m_rules.size());
-  m_rules.push_back(rule);
-  rule->setAction(action);
-  return rule;
-}
-*/
 
 void Grammar::getRulesByLeftSymbol(std::vector<const Rule*> &rules, const std::string &leftSymbolName) const
 {
@@ -240,6 +168,19 @@ void Grammar::getRulesByLeftSymbol(std::vector<const Rule*> &rules, const std::s
   }
 }
 
+
+const NonTerminalSymbol *Grammar::getStartSymbol() const
+{
+  if(m_rules.empty()) return 0;
+  else return static_cast<const NonTerminalSymbol *>(m_rules[0]->getRightSymbol(0));
+}
+
+void Grammar::setStartSymbol(const NonTerminalSymbol*nt)
+{
+  updateRootRule(nt);
+}
+
+
 void Grammar::dump(ostream &out) const
 {
   for(int i=0;i<getRuleCount();i++)
@@ -249,6 +190,7 @@ void Grammar::dump(ostream &out) const
   }
 }
 
+//=============================================================================
 
 
 RuleBuilder::RuleBuilder(Grammar *g, const std::string &leftSymbolName)
@@ -259,26 +201,16 @@ RuleBuilder::RuleBuilder(Grammar *g, const std::string &leftSymbolName)
 
 RuleBuilder &RuleBuilder::t(const std::string &t)
 {
-  Symbol *symbol = m_grammar->addTerminal(new TextTerminalSymbol(t));
+  const Symbol *symbol = m_grammar->addTerminal(new TextTerminalSymbol(t));
   m_symbols.push_back(symbol);
   return *this;
 }
 
-RuleBuilder &RuleBuilder::t(TerminalSymbol *terminal)
+RuleBuilder &RuleBuilder::t(const TerminalSymbol *terminal)
 {
   m_symbols.push_back(terminal);
   return *this;
 }
-
-
-/*
-RuleBuilder &RuleBuilder::t(Token::Type ty)
-{
-  Symbol *symbol = m_grammar->addTerminal(new TokenTypeTerminalSymbol(m_grammar, ty));
-  m_symbols.push_back(symbol);
-  return *this;
-}
-*/
 
 RuleBuilder &RuleBuilder::n(const std::string &ntName)
 {

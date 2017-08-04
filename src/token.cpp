@@ -174,7 +174,7 @@ void StringTokenizer::dumpPosition(std::ostream &out, Token::Position tokenPosit
   {
     const Token &token = m_tokens[i];
     out << token.getSpaces().c_str();
-    for(int j=0;j<token.getText().length();j++) out << "_";
+    for(int j=0;j<(int)token.getText().length();j++) out << "_";
   }
   out << "^" << endl;  
 }

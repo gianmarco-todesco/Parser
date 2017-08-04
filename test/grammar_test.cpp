@@ -117,7 +117,7 @@ TEST_CASE( "Rule 1", "[grammar]") {
   TextTerminalSymbol x("x");
   RuleAction action("Group");
 
-  vector<Symbol*> symbols;
+  vector<const Symbol*> symbols;
   symbols.push_back(&A);
   symbols.push_back(&x);
   Rule rule(&A, symbols, action);
@@ -142,7 +142,7 @@ TEST_CASE( "Rule 2", "[grammar]") {
   NonTerminalSymbol A("A");
   RuleAction action("Group");
 
-  vector<Symbol*> symbols;
+  vector<const Symbol*> symbols;
   Rule rule(&A, symbols, action);
   REQUIRE(rule.getLength() == 0);
   REQUIRE(rule.getRightSymbol(0) == 0);
@@ -163,9 +163,9 @@ TEST_CASE( "Grammar 1", "[grammar]") {
   REQUIRE(g->getNonTerminal("A")->getName() == "A");
   REQUIRE(g->getNonTerminal("A", false) != 0);
 
-  NonTerminalSymbol *A = g->getNonTerminal("A");
-  TerminalSymbol *x = g->addTerminal(new TextTerminalSymbol("x"));
-  vector<Symbol*> symbols;
+  const NonTerminalSymbol *A = g->getNonTerminal("A");
+  const TerminalSymbol *x = g->addTerminal(new TextTerminalSymbol("x"));
+  vector<const Symbol*> symbols;
   symbols.push_back(x);
   g->addRule(new Rule(A,symbols, RuleAction("")));
   symbols.clear();
@@ -173,9 +173,10 @@ TEST_CASE( "Grammar 1", "[grammar]") {
   symbols.push_back(x);
   g->addRule(new Rule(A,symbols, RuleAction("")));
   
-  REQUIRE(g->getRuleCount()==2);
-  REQUIRE(toString(*g->getRule(0))=="A -> 'x'");
-  REQUIRE(toString(*g->getRule(1))=="A -> A 'x'");
+  REQUIRE(g->getRuleCount()==3);
+  REQUIRE(toString(*g->getRule(0))=="_root -> A EOF");
+  REQUIRE(toString(*g->getRule(1))=="A -> 'x'");
+  REQUIRE(toString(*g->getRule(2))=="A -> A 'x'");
 
   g->getRulesByLeftSymbol(rules,"A");
   REQUIRE(rules.size() == 2);
@@ -193,12 +194,13 @@ TEST_CASE( "Grammar 2", "[grammar]") {
   REQUIRE(g->getNonTerminal("Sum",false) != 0);
   REQUIRE(g->getNonTerminal("Var",false) != 0);
 
-  REQUIRE(g->getRuleCount()==5);
-  REQUIRE(toString(*g->getRule(0)) == "Sum -> Var");
-  REQUIRE(toString(*g->getRule(1)) == "Sum -> Sum '+' Var");
-  REQUIRE(toString(*g->getRule(2)) == "Var -> 'x'");
-  REQUIRE(toString(*g->getRule(3)) == "Var -> 'y'");
-  REQUIRE(toString(*g->getRule(4)) == "Var -> 'z'");
+  REQUIRE(g->getRuleCount()==6);
+  REQUIRE(toString(*g->getRule(0)) == "_root -> Sum EOF");
+  REQUIRE(toString(*g->getRule(1)) == "Sum -> Var");
+  REQUIRE(toString(*g->getRule(2)) == "Sum -> Sum '+' Var");
+  REQUIRE(toString(*g->getRule(3)) == "Var -> 'x'");
+  REQUIRE(toString(*g->getRule(4)) == "Var -> 'y'");
+  REQUIRE(toString(*g->getRule(5)) == "Var -> 'z'");
   
   for(int i=0; i<g->getRuleCount();i++)
   {

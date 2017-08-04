@@ -108,14 +108,14 @@ public:
 
 class Rule {
 private:
-  NonTerminalSymbol *m_left;    // not owner
-  std::vector<Symbol*> m_right; // not owner
+  const NonTerminalSymbol *m_left;    // not owner
+  std::vector<const Symbol*> m_right; // not owner
   int m_id;
   RuleAction m_action;
 public:
   Rule(
-    NonTerminalSymbol *left, 
-    const std::vector<Symbol*> &right,
+    const NonTerminalSymbol *left, 
+    const std::vector<const Symbol*> &right,
     const RuleAction &action) 
     : m_left(left)
     , m_right(right)
@@ -143,6 +143,8 @@ class Grammar {
   std::map<std::string, NonTerminalSymbol*> m_ntSymbols;
   std::vector<TerminalSymbol*> m_tSymbols;
   std::vector<Rule*> m_rules;
+  NonTerminalSymbol *m_rootSymbol;
+  TerminalSymbol *m_eofSymbol;
 
 public:
   Grammar();
@@ -150,32 +152,36 @@ public:
 
   void clear();
 
-  NonTerminalSymbol*getNonTerminal(const std::string &name, bool createIfNeeded = true);
-  TerminalSymbol* addTerminal(TerminalSymbol*t);
+  const NonTerminalSymbol*getNonTerminal(const std::string &name, bool createIfNeeded = true);
+  const TerminalSymbol* addTerminal(TerminalSymbol*t);
 
-  const Rule *addRule(Rule *rule); // takes ownership
+  const Rule *addRule(Rule *rule); // takes ownership; n.b. the left-side of the first rule becomes the start symbol
   
   int getRuleCount() const { return (int)m_rules.size(); }
   const Rule *getRule(int index) const { return m_rules[index]; }
 
   void getRulesByLeftSymbol(std::vector<const Rule*> &rules, const std::string &leftSymbolName) const;
 
+  const NonTerminalSymbol *getStartSymbol() const;
+  void setStartSymbol(const NonTerminalSymbol*nt);
+
+  const NonTerminalSymbol *getRootSymbol() const { return m_rootSymbol; }
+
   void dump(std::ostream &out) const;
 
 private:
-  // Symbol *getSymbol(ITokenizer *tokenizer);
+  void updateRootRule(const NonTerminalSymbol *startSymbol);
 };
 
 
 class RuleBuilder {
   Grammar *m_grammar;
-  NonTerminalSymbol *m_leftSymbol;
-  std::vector<Symbol*> m_symbols;
+  const NonTerminalSymbol *m_leftSymbol;
+  std::vector<const Symbol*> m_symbols;
 public:
   RuleBuilder(Grammar *g, const std::string &leftSymbolName);
   RuleBuilder &t(const std::string &t);
-  RuleBuilder &t(TerminalSymbol *terminal);
-  // RuleBuilder &t(Token::Type ty);
+  RuleBuilder &t(const TerminalSymbol *terminal);
   RuleBuilder &n(const std::string &ntName);
   const Rule *end(const RuleAction &action = RuleAction());
 };

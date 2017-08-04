@@ -179,10 +179,10 @@ void ParseState::dump()
 
 //=============================================================================
 
-ParseTable::ParseTable(const Grammar *g, const string &startNtName)
+ParseTable::ParseTable(const Grammar *g)
   : m_grammar(g)
 {
-  build(startNtName);
+  build();
 }
 
 ParseTable::~ParseTable()
@@ -202,9 +202,9 @@ void ParseTable::dump() const
 }
 
 
-void ParseTable::build(const string &startNtName)
+void ParseTable::build()
 {
-  ParseState *state = new ParseState(m_grammar, startNtName);
+  ParseState *state = new ParseState(m_grammar, m_grammar->getRootSymbol()->getName());
   state->setId(0);
   m_states.push_back(state);
   map<string, ParseState *> table;
@@ -243,7 +243,7 @@ void ParseTable::build(const string &startNtName)
 ParseTree::ParseTree(const BaseTokenizer *tokenizer)
   : m_tokenizer(tokenizer)
 {
-  //m_buffer.reserve(1000000);
+  // m_buffer.reserve(10000000);
 }
 
 ParseTree::~ParseTree()
@@ -293,20 +293,38 @@ void ParseTree::makeNode(const std::string &tag, int count, unsigned long mask)
   if(res.second) m_nodeTags.push_back(tag);
   int tagIndex = res.first->second;
     
+
+  static int tmpBuffer[1000000];
+
+  /*
   vector<int> tmpBuffer;
-  //tmpBuffer.reserve(1000);
+  tmpBuffer.reserve(10000);
   tmpBuffer.push_back(0);
   tmpBuffer.push_back(tagIndex);
   tmpBuffer.push_back(0); // child count
+  */
+  tmpBuffer[0] = 0;
+  tmpBuffer[1] = tagIndex;
+  tmpBuffer[2] = 0;
+  
+  int tmpBufferLength = 3;
 
   int h = (int)m_stack.size() - count; 
   assert(h>=0);
+  int fieldCount = 0;
+  for(int i=0; i<count; i++)
+  {
+    if(((mask>>i)&1)!=0) fieldCount++;
+  }
+
+  int fieldIndex = 0;
   for(int i=0; i<count; i++)
   {
     if(((mask>>i)&1)==0) continue;
+    fieldIndex++;
     int a = m_stack[h+i];
     int b = a + m_buffer[a];
-    if(m_buffer[a+1]==tagIndex) // left recursion
+    if(fieldCount>1 && fieldIndex==1 && m_buffer[a+1]==tagIndex) // left recursion
     {
       tmpBuffer[2] += m_buffer[a+2];
       a+=3;
@@ -315,10 +333,16 @@ void ParseTree::makeNode(const std::string &tag, int count, unsigned long mask)
     {
       tmpBuffer[2]++;
     }
-    tmpBuffer.insert(tmpBuffer.end(), m_buffer.begin()+a, m_buffer.begin()+b);
+
+    // tmpBuffer.insert(tmpBuffer.end(), m_buffer.begin()+a, m_buffer.begin()+b);
+    // memcpy(&(tmpBuffer[tmpBufferLength]), &(m_buffer[a]), sizeof(int)*(b-a));
+    for(int j=0; j<b-a; j++) tmpBuffer[tmpBufferLength+j] = m_buffer[a+j];
+    tmpBufferLength += (b-a);
   }
 
-  tmpBuffer[0] = (int)tmpBuffer.size();
+  // tmpBuffer[0] = (int)tmpBuffer.size();
+  tmpBuffer[0] = tmpBufferLength;
+
   int k;
   if(count>0)
   {
@@ -329,7 +353,8 @@ void ParseTree::makeNode(const std::string &tag, int count, unsigned long mask)
   {
     k = m_buffer.size();
   }
-  m_buffer.insert(m_buffer.end(), tmpBuffer.begin(), tmpBuffer.end());
+  //m_buffer.insert(m_buffer.end(), tmpBuffer.begin(), tmpBuffer.end());
+  m_buffer.insert(m_buffer.end(), tmpBuffer, tmpBuffer + tmpBufferLength); //    tmpBuffer.begin(), tmpBuffer.end());
 
   m_stack.erase(m_stack.begin()+h, m_stack.end());
   m_stack.push_back(k);
@@ -456,11 +481,12 @@ void ParseTree::dump(ostream &out) const
 //=============================================================================
 
 
-Parser::Parser(const Grammar *grammar, const string &startNtName)
+Parser::Parser(const Grammar *grammar)
   : m_grammar(grammar)
-  , m_parseTable(grammar, startNtName)
+  , m_parseTable(grammar)
   , m_parseTree(0)
   , m_tokenizer(0)
+  , m_skipNewLines(false)
 {
 }
 
@@ -483,7 +509,8 @@ bool Parser::parse(const BaseTokenizer *tokenizer)
     const vector<const TerminalSymbol*> &terminals = state->getCurrentTerminals();
     vector<const TerminalSymbol*> matchedTerminals;
 
-    skipNewLinesAndComments(tokens, pos);
+    if(m_skipNewLines)
+      skipNewLinesAndComments(tokens, pos);
 
     // cout << tokens[pos] << endl;
 
@@ -563,6 +590,23 @@ void Parser::doSemanticAction(const Rule *rule)
     else
       m_parseTree->takeOne(count, i);
   }
+  else if(rule->getAction().getGroupName() == "pass")
+  {
+    int mask = rule->getAction().getMask();
+    vector<int> fields;
+    int i=0;
+    while(mask!=0) 
+    {
+      if(mask&1) fields.push_back(i);
+      mask>>=1;
+      i++;
+    }
+    m_parseTree->takeOne(rule->getLength(), fields[0]);
+  }
+  else if(rule->getAction().getGroupName() == "null")
+  {
+    m_parseTree->makeNode("_nil", rule->getLength(), 0);
+  }
   else
   {
     const RuleAction &action = rule->getAction();
@@ -570,7 +614,7 @@ void Parser::doSemanticAction(const Rule *rule)
   }
 }
 
-/*
+
 void Parser::skipNewLinesAndComments(const std::vector<Token> &tokens, int &pos)
 {
   const Token slash(Token::T_Special, "/");
@@ -604,4 +648,4 @@ void Parser::skipNewLinesAndComments(const std::vector<Token> &tokens, int &pos)
   }
 }
 
-*/
+
