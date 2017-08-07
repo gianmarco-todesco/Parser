@@ -54,10 +54,10 @@ std::ostream &operator<<(std::ostream &out, const Token &token)
 namespace {
 
   bool matchIdent(const std::string &buffer, int &pos, std::string &ident) {
-    if(!isalpha(buffer[pos])) return false;
+    if(!(isalpha(buffer[pos]) || buffer[pos]=='_')) return false;
     int startPos = pos;
     pos++;
-    while(pos<(int)buffer.size() && isalnum(buffer[pos])) pos++;
+    while(pos<(int)buffer.size() && (isalnum(buffer[pos]) || buffer[pos]=='_')) pos++;
     ident = buffer.substr(startPos, pos-startPos);
     return true;
   }
@@ -72,6 +72,10 @@ namespace {
     {
       pos++;
       while(pos<n && isdigit(buffer[pos]))pos++;
+    }
+    else
+    {
+      if(buffer[pos]=='u' || buffer[pos]=='U') pos++;
     }
     if(pos<n && (buffer[pos]=='e' || buffer[pos]=='E'))
     {
@@ -220,6 +224,16 @@ pair<int, int> FileTokenizer::getLineAndColumn(Token::Position tokenPosition) co
 
 void FileTokenizer::dumpPosition(std::ostream &out, Token::Position tokenPosition) const
 {
+  /*
+  string location = getLocation(tokenPosition);
+  out << 
+  */
+  Token::Position position = m_tokens[tokenPosition].getPosition();
+  int i=0;
+  while(i<(int)m_lines.size() && m_lines[i].first < tokenPosition) i++;
+  out << "line:" << (m_lines[i-1].second+1) << endl;
+  out << "file:" << m_filepath.c_str() << endl;
+
 }
 
 /*

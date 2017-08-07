@@ -35,7 +35,6 @@ namespace {
     RuleBuilder(g,"action").t(":").t("null").end(RuleAction("Action",0x2));
     RuleBuilder(g,"action").t(":").t(ident).t("(").n("IntLst").t(")").end(RuleAction("Action",0xA));
     RuleBuilder(g,"action").t(":").t(ident).end(RuleAction("Action",0x2));
-    RuleBuilder(g,"action").t(":").t(ident).t("(").n("IntLst").t(")").end(RuleAction("Action",0xA));
 
     RuleBuilder(g,"IntLst").t(number).end(RuleAction("IntLst"));
     RuleBuilder(g,"IntLst").n("IntLst").t(",").t(number).end(RuleAction("IntLst",0x5));
@@ -96,6 +95,10 @@ Grammar *GrammarBuilder::build(BaseTokenizer *tokenizer)
         else if(item.getToken().getText() == "int")
         {
           symbols.push_back(grammar->addTerminal(new TokenTypeTerminalSymbol("int", Token::T_Number)));
+        }
+        else if(item.getToken().getText() == "qstring")
+        {
+          symbols.push_back(grammar->addTerminal(new TokenTypeTerminalSymbol("qstring", Token::T_QuotedString)));
         }
         else if(item.getToken().getText() == "any")
         {

@@ -152,14 +152,18 @@ void ParseState::postBuild()
       table.insert(symbol); 
       m_currentSymbols.push_back(symbol); 
       if(symbol->isTerminal()) 
-        m_currentTerminals.push_back(dynamic_cast<const TerminalSymbol*>(symbol));
+      {
+        const TerminalSymbol *term = dynamic_cast<const TerminalSymbol*>(symbol);
+        
+        m_currentTerminals.push_back(term);
+      }
     }
   }
   sort(m_currentTerminals.begin(), m_currentTerminals.end(), GreaterThanTerminal());
 }
 
 
-void ParseState::dump()
+void ParseState::dump() const
 {
   for(vector<pair<int, int> >::const_iterator it = m_items.begin(); it != m_items.end(); ++it)
   {
@@ -540,9 +544,17 @@ bool Parser::parse(const BaseTokenizer *tokenizer)
     }
     else if(completedRules.size()>0)
     {
-      if(completedRules.size()>1) cout << "Reduce-reduce conflict" << endl;
-      const Rule *rule = completedRules[0];
-      //cout << "Reduce " << *rule << endl;
+      if(completedRules.size()>1) 
+      {
+        cout << "Reduce-reduce conflict" << endl;
+        for(int i=0;i<(int)completedRules.size();i++)
+          cout << "Reduce " << *completedRules[i] << endl;
+      }
+
+      const Rule *rule;      
+      rule = completedRules[0];
+
+
       doSemanticAction(rule);
 
       for(int i=0;i<rule->getLength();i++) m_stack.pop_back();
@@ -563,6 +575,9 @@ bool Parser::parse(const BaseTokenizer *tokenizer)
       cout << endl;
       cout << "Found " << tokenizer->getTokens()[pos] << endl;
       tokenizer->dumpPosition(cout, pos);
+
+      state->dump();
+
       break;
     }    
   }
@@ -593,6 +608,7 @@ void Parser::doSemanticAction(const Rule *rule)
   else if(rule->getAction().getGroupName() == "pass")
   {
     int mask = rule->getAction().getMask();
+    if(mask==0 && rule->getLength()==1) mask = 1;
     vector<int> fields;
     int i=0;
     while(mask!=0) 
@@ -601,7 +617,10 @@ void Parser::doSemanticAction(const Rule *rule)
       mask>>=1;
       i++;
     }
-    m_parseTree->takeOne(rule->getLength(), fields[0]);
+    if(fields.size()>0)
+      m_parseTree->takeOne(rule->getLength(), fields[0]);
+    else
+      m_parseTree->makeNode("_nil", rule->getLength(), 0);
   }
   else if(rule->getAction().getGroupName() == "null")
   {

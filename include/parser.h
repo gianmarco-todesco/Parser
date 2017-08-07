@@ -28,7 +28,7 @@ public:
 
   const std::vector<std::pair<int, int> > &getItems() const { return m_items; }
 
-  void dump();
+  void dump() const;
 
   const std::vector<const Symbol*> &getCurrentSymbols() const { return m_currentSymbols; }
   const std::vector<const TerminalSymbol*> &getCurrentTerminals() const { return m_currentTerminals; }

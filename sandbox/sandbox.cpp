@@ -306,7 +306,7 @@ int main7()
 
 
 
-int main()
+int main8()
 {
   GrammarBuilder gb;
 
@@ -314,6 +314,13 @@ int main()
     "StmLst -> \n"
     "StmLst -> StmLst Stm\n"
     "Stm -> 'int' ident '(' ')' Block : Function(1,2,5)\n"
+    "Stm -> 'typedef' ident '(' ')' Block : Function(1,2,5)\n"
+    "Stm -> '#' 'include' qstring : null\n"
+    "Stm -> '#' 'include' '<' Filename '>' : Include(4)\n"
+    "Stm -> '#' 'define' ident ident: Define(3,4)\n"
+    "Stm -> '#' 'define' ident int: Define(3,4)\n"
+    "Filename -> ident '.' ident\n"
+    "Filename -> ident '/' Filename\n"
     "Block -> '{' BlockContent '}' : null\n"
     "BlockContent -> : null\n"
     "BlockContent -> BlockContent Block : null\n"
@@ -321,7 +328,7 @@ int main()
   );
 
   Grammar *g = gb.build(&st);
-  g->dump(cout);
+  //g->dump(cout);
 
   Parser parser(g);
   parser.setSkipNewLines(true);
@@ -346,7 +353,19 @@ int main()
     cout << "parse tree ok " << endl;
     parseTree->dump(cout);
     // cout << parseTree->getNode(0).getChildCount() << endl;
+  }
 
+  FileTokenizer sf;
+  sf.read("C:\\shared\\TargetIT\\test1\\target\\test.c");
+
+  ret = parser.parse(&sf);
+  if(ret)
+  {
+    cout << "Parsed ok " << endl;
+    const ParseTree *parseTree = parser.getParseTree();
+    cout << "parse tree ok " << endl;
+    parseTree->dump(cout);
+    // cout << parseTree->getNode(0).getChildCount() << endl;
   }
 
   
@@ -354,3 +373,44 @@ int main()
   return 0;
 }
 
+Grammar *makeCGrammar()
+{
+  GrammarBuilder gb;
+  FileTokenizer ft;
+  if(!ft.read("cgrammar.txt")) return 0;
+  return gb.build(&ft);
+}
+
+int main()
+{
+  Grammar *g = makeCGrammar();
+  if(g)
+  {
+    Parser parser(g);
+    parser.setSkipNewLines(true);
+
+    FileTokenizer sf;
+    //sf.read("C:\\shared\\TargetIT\\test1\\target\\test2.c");
+    sf.read("test.c");
+    cout << "Start" << endl;
+    start();
+    bool ret = parser.parse(&sf);
+    end();
+    if(false && ret)
+    {
+      cout << "Parsed ok " << endl;
+      const ParseTree *parseTree = parser.getParseTree();
+      cout << "parse tree ok " << endl;
+      parseTree->dump(cout);
+      // cout << parseTree->getNode(0).getChildCount() << endl;
+    }
+    
+
+  }
+
+
+
+  
+
+  return 0;
+}
