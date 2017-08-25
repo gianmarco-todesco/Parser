@@ -76,10 +76,8 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\..\test\grammarbuilder_test.cpp" />
     <ClCompile Include="..\..\..\test\grammar_test.cpp" />
     <ClCompile Include="..\..\..\test\main.cpp" />
-    <ClCompile Include="..\..\..\test\parser_test.cpp" />
     <ClCompile Include="..\..\..\test\tokenizer_test.cpp" />
   </ItemGroup>
   <ItemGroup>

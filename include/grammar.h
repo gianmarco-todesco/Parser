@@ -2,18 +2,25 @@
 #define GRAMMAR_H
 
 #include <vector>
+#include <set>
+#include <map>
 #include <string>
 
 #include "token.h"
 
 class Grammar;
+class SymbolPool;
 
+//
+// Symbol
+// 
 class Symbol {
   std::string m_name;
   static int m_totalCount;
+  friend class SymbolPool;
 public:
-  Symbol(const std::string &name) : m_name(name) { m_totalCount++; }
   virtual ~Symbol() { m_totalCount--; }
+
   const std::string &getName() const { return m_name; }
   virtual bool isTerminal() const = 0;
   bool isNonTerminal() const { return !isTerminal(); }
@@ -23,52 +30,70 @@ public:
   static int getTotalCount() { return m_totalCount; }
 
 protected:
+  Symbol(const std::string &name) : m_name(name) { m_totalCount++; }
   void setName(const std::string &name) { m_name = name; }
 };
 
 std::ostream &operator<<(std::ostream &out, const Symbol &nt);
 
+
+//
+// NonTerminalSymbol
+// 
 class NonTerminalSymbol : public Symbol {
+  friend class SymbolPool;
 public:
-  NonTerminalSymbol(const std::string &name) : Symbol(name) {}
   bool isTerminal() const { return false; }
   bool isConstant() const { return false; }
   bool matches(const Token &) const { return false; }
+protected:
+  NonTerminalSymbol(const std::string &name) : Symbol(name) {}
 };
 
+//
+// TerminalSymbol
+// 
 class TerminalSymbol : public Symbol {
+  friend class SymbolPool;
 public:
-  TerminalSymbol(const std::string &name) : Symbol(name) {}
   virtual ~TerminalSymbol() {}
   bool isTerminal() const { return true; }
   virtual int getConstantStrength() const = 0;
+protected:
+  TerminalSymbol(const std::string &name) : Symbol(name) {}
 };
 
 
+//
+// TextTerminalSymbol
+// 
 class TextTerminalSymbol : public TerminalSymbol {
   std::string m_text;
+  friend class SymbolPool;
 public:
-  TextTerminalSymbol(const std::string &text) : TerminalSymbol("'"+text+"'"), m_text(text) {}
-  TextTerminalSymbol(const std::string &text, const std::string &name) : TerminalSymbol(name), m_text(text) {}
   bool isConstant() const { return true; }
   bool matches(const Token &token) const { return token.getText() == m_text; }
   int getConstantStrength() const { return 10; }
+protected:
+  TextTerminalSymbol(const std::string &text) : TerminalSymbol("'"+text+"'"), m_text(text) {}
+  TextTerminalSymbol(const std::string &text, const std::string &name) : TerminalSymbol(name), m_text(text) {}
 };
 
+//
+// TokenTypeTerminalSymbol
+// 
 class TokenTypeTerminalSymbol : public TerminalSymbol {
   Token::Type m_type;
+  friend class SymbolPool;
 public:
-  TokenTypeTerminalSymbol(const std::string &name, Token::Type type) : TerminalSymbol(name), m_type(type) {}
   bool isConstant() const { return m_type == Token::T_Eol || m_type == Token::T_Eof; }
   bool matches(const Token &token) const { return token.getType() == m_type; }
   int getConstantStrength() const { return 5; }
+protected:
+  TokenTypeTerminalSymbol(const std::string &name, Token::Type type) : TerminalSymbol(name), m_type(type) {}
 };
 
-class NumberTerminalSymbol : public TokenTypeTerminalSymbol {
-public:
-  NumberTerminalSymbol() : TokenTypeTerminalSymbol("number", Token::T_Number) {}
-};
-
+/*
 
 class KeywordsTerminalSymbol : public TerminalSymbol {
   std::vector<std::string> m_keywords;
@@ -84,16 +109,59 @@ public:
 private:
   void buildName();
 };
+*/
 
+//
+// AnyTerminalSymbol
+// 
 class AnyTerminalSymbol : public TerminalSymbol {
+  friend class SymbolPool;
 public:
-  AnyTerminalSymbol() : TerminalSymbol("any") {}
   virtual ~AnyTerminalSymbol() {}
   bool isConstant() const { return false; }
   bool matches(const Token &) const { return true; }
   int getConstantStrength() const { return 1; }
+protected:
+  AnyTerminalSymbol() : TerminalSymbol("any") {}
 };
 
+//
+// SymbolPool
+// 
+class SymbolPool {
+  std::map<std::string, NonTerminalSymbol*> m_ntSymbols;
+  std::map<std::string, TerminalSymbol*> m_tSymbols;
+public:
+  SymbolPool();
+  ~SymbolPool();
+
+  const NonTerminalSymbol* getNonTerminalSymbol(const std::string &name, bool createIfNeeded=true);
+
+  const TerminalSymbol* getTextTerminalSymbol(const std::string &text, bool createIfNeeded=true);
+  const TerminalSymbol* getIdentTerminalSymbol() { return getTokenTypeTerminalSymbol("ident", Token::T_Ident); }
+  const TerminalSymbol* getNumberTerminalSymbol()  { return getTokenTypeTerminalSymbol("number", Token::T_Number); }
+  const TerminalSymbol* getQuotedStringTerminalSymbol()  { return getTokenTypeTerminalSymbol("qstring", Token::T_QuotedString); }
+  const TerminalSymbol* getSpecialTerminalSymbol()  { return getTokenTypeTerminalSymbol("special", Token::T_Special); }
+  const TerminalSymbol* getEolTerminalSymbol() { return getTokenTypeTerminalSymbol("EOL", Token::T_Eol); }
+  const TerminalSymbol* getEofTerminalSymbol() { return getTokenTypeTerminalSymbol("EOF", Token::T_Eof); }
+  const TerminalSymbol* getAnyTerminalSymbol();
+
+  const NonTerminalSymbol* nt(const std::string &name) { return getNonTerminalSymbol(name); }
+  const TerminalSymbol* t(const std::string &text) { return getTextTerminalSymbol(text); }
+  const TerminalSymbol* eof() { return getEofTerminalSymbol(); }
+  
+  void getNonTerminalSymbols(std::vector<const NonTerminalSymbol*> &nts) const;
+  void getNonTerminalSymbolNames(std::vector<std::string> &nts) const;
+
+protected:
+  TerminalSymbol* getTerminalSymbol(const std::string &name);
+  TerminalSymbol* getTokenTypeTerminalSymbol(const std::string &name, Token::Type type);
+  
+};
+
+//
+// RuleAction
+// 
 class RuleAction {
   std::string m_groupName;
   unsigned long m_mask;
@@ -106,6 +174,9 @@ public:
   unsigned long getMask() const { return m_mask; }
 };
 
+//
+// Rule
+// 
 class Rule {
 private:
   const NonTerminalSymbol *m_left;    // not owner
@@ -139,21 +210,24 @@ public:
 std::ostream &operator<<(std::ostream &out, const Rule &rule);
 
 
+//
+// Grammar
+// 
 class Grammar {
-  std::map<std::string, NonTerminalSymbol*> m_ntSymbols;
-  std::vector<TerminalSymbol*> m_tSymbols;
+  SymbolPool m_symbols;
   std::vector<Rule*> m_rules;
-  NonTerminalSymbol *m_rootSymbol;
-  TerminalSymbol *m_eofSymbol;
+  const NonTerminalSymbol *m_rootSymbol;
+  mutable std::set<std::string> m_nullables;
+  mutable std::map<std::string, std::set<const TerminalSymbol*> > m_firsts;
+  mutable bool m_dirty;
 
 public:
   Grammar();
   ~Grammar();
 
-  void clear();
+  SymbolPool &symbols() { return m_symbols; }
 
-  const NonTerminalSymbol*getNonTerminal(const std::string &name, bool createIfNeeded = true);
-  const TerminalSymbol* addTerminal(TerminalSymbol*t);
+  void clear();
 
   const Rule *addRule(Rule *rule); // takes ownership; n.b. the left-side of the first rule becomes the start symbol
   
@@ -165,15 +239,23 @@ public:
   const NonTerminalSymbol *getStartSymbol() const;
   void setStartSymbol(const NonTerminalSymbol*nt);
 
-  const NonTerminalSymbol *getRootSymbol() const { return m_rootSymbol; }
+  const NonTerminalSymbol *getRootSymbol() const { return m_rootSymbol; }  
 
   void dump(std::ostream &out) const;
 
+  const std::set<std::string> &getNullables() const;
+  bool isNullable(std::string ntName) const;
+  bool isNullable(const NonTerminalSymbol *nt) const { return isNullable(nt->getName()); }
+
 private:
   void updateRootRule(const NonTerminalSymbol *startSymbol);
+  void computeAll() const;
 };
 
 
+//
+// RuleBuilder
+// 
 class RuleBuilder {
   Grammar *m_grammar;
   const NonTerminalSymbol *m_leftSymbol;
@@ -182,6 +264,13 @@ public:
   RuleBuilder(Grammar *g, const std::string &leftSymbolName);
   RuleBuilder &t(const std::string &t);
   RuleBuilder &t(const TerminalSymbol *terminal);
+  RuleBuilder &id() { return t(m_grammar->symbols().getIdentTerminalSymbol()); }
+  RuleBuilder &number() { return t(m_grammar->symbols().getNumberTerminalSymbol()); }
+  RuleBuilder &special() { return t(m_grammar->symbols().getSpecialTerminalSymbol()); }
+  RuleBuilder &qstring() { return t(m_grammar->symbols().getQuotedStringTerminalSymbol()); }
+  RuleBuilder &eol() { return t(m_grammar->symbols().getEolTerminalSymbol()); }
+  RuleBuilder &eof() { return t(m_grammar->symbols().getEofTerminalSymbol()); }
+  RuleBuilder &any() { return t(m_grammar->symbols().getAnyTerminalSymbol()); }
   RuleBuilder &n(const std::string &ntName);
   const Rule *end(const RuleAction &action = RuleAction());
 };

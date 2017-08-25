@@ -49,17 +49,34 @@ class BaseTokenizer {
 protected:
   std::vector<Token> m_tokens;
   bool m_read;
+  std::vector<std::pair<Token::Position, int> > m_lines;
+  // <position of the first token of the line, line number (first line => 1)>
+  int m_lineCount;
+  bool m_newLine;
+
 public:
-  BaseTokenizer() : m_read(false) {}
+  BaseTokenizer() : m_read(false), m_lineCount(0), m_newLine(true) {}
   virtual ~BaseTokenizer() {}
 
   const std::vector<Token> &getTokens() const { return m_tokens; } 
+  int getLineCount() const { return m_lineCount; }
 
   // return line and columns of the given token position
-  virtual std::pair<int, int> getLineAndColumn(Token::Position tokenPosition) const = 0;
+  std::pair<int, int> getLineAndColumn(Token::Position tokenPosition) const;
+  std::pair<int, int> getLineAndColumn(const Token &token) const { return getLineAndColumn(token.getPosition()); }
+
+  std::string getLineText(int lineNumber) const;
+  std::string getLineTextAndArrow(int lineNumber, int columnNumber) const;
+  std::string getLineTextAndArrow(const std::pair<int, int> lc) const { return getLineTextAndArrow(lc.first,lc.second); }
 
   // write filename (if any), line and column; dump the whole line with a mark under the position
   virtual void dumpPosition(std::ostream &out, Token::Position tokenPosition) const = 0;  
+  void dumpPosition(std::ostream &out, const Token &token) const { dumpPosition(out, token.getPosition()); }  
+
+protected:
+  void addToken(Token::Type type, const std::string &value, const std::string &spaces);
+  void readLine(const std::string &buffer);
+
 };
 
 //
@@ -70,13 +87,10 @@ class StringTokenizer : public BaseTokenizer {
   std::string m_buffer;
 public:
   StringTokenizer(const std::string &buffer) : m_buffer(buffer) { 
-    read(m_tokens, m_buffer); 
+    readLine(m_buffer); 
   }
   ~StringTokenizer() {}
 
-  static void read(std::vector<Token> &tokens, const std::string &text, int startPos = 0);
-
-  std::pair<int, int> getLineAndColumn(Token::Position tokenPosition) const;
   void dumpPosition(std::ostream &out, Token::Position tokenPosition) const;  
 };
 
@@ -88,15 +102,12 @@ public:
 //
 class FileTokenizer : public BaseTokenizer {
   std::string m_filepath;
-  std::vector<std::pair<Token::Position, int> > m_lines;
-  // position of the first token of the line; line number (first line => 1)
 public:
   FileTokenizer() {}
   ~FileTokenizer() {}
   bool read(const std::string &filepath);
 
-  std::string getLocation(long int tokenPos) const;
-  std::pair<int, int> getLineAndColumn(Token::Position tokenPosition) const;
+  // std::string getLocation(long int tokenPos) const;
   void dumpPosition(std::ostream &out, Token::Position tokenPosition) const;  
 };
 

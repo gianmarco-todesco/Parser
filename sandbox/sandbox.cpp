@@ -2,6 +2,10 @@
 #include "../include/grammarbuilder.h"
 
 #include <iostream>
+#include <set>
+#include <sstream>
+#include <vector>
+#include <algorithm>
 
 using namespace std;
 
@@ -26,7 +30,7 @@ void end()
   cout << "Elapsed time = " << elapsedTime << endl;
 }
 
-
+#ifdef CICCIO
 int main2()
 {
   StringTokenizer st(
@@ -381,7 +385,7 @@ Grammar *makeCGrammar()
   return gb.build(&ft);
 }
 
-int main()
+int main9()
 {
   Grammar *g = makeCGrammar();
   if(g)
@@ -411,6 +415,141 @@ int main()
 
 
   
+
+  return 0;
+}
+
+
+class Item {
+public:
+  const Rule *rule;
+  int dot;
+  vector<const TerminalSymbol*> la;
+  Item(const Rule *r, int d, const TerminalSymbol*t) : rule(r), dot(d) { la.push_back(t); }
+  Item(const Rule *r, int d, const vector<const TerminalSymbol*> &_la) : rule(r), dot(d), la(_la) {}
+
+  void dump() {
+    cout << "  "  << rule->getLeftSymbol()->getName().c_str() << " ->";
+    for(int i=0;i<rule->getLength();i++)
+    {
+      if(i==dot) cout << " @";
+      cout << " " << rule->getRightSymbol(i)->getName().c_str();
+    }
+    if(rule->getLength()==dot) cout << " @";
+    cout << ", ";
+    for(int i=0;i<(int)la.size();i++) cout << *la[i];
+    cout << endl;
+  }
+};
+
+
+class ItemSet {
+public:
+  vector<Item*> items;
+  string signature;
+
+  void computeSignature() {
+    
+    vector<pair<int,int> > v;
+    for(int i=0;i<items.size();i++) {
+      v.push_back(make_pair(items[i]->rule->getId(), items[i]->dot));
+    }
+    sort(v.begin(), v.end());
+    ostringstream ss;
+    for(int i=0;i<(int)v.size();i++) ss << v[i].first << "," << v[i].second << ";";
+    ss << '\0';
+    signature = ss.str();
+  }
+};
+
+class Table {
+public:
+  Grammar *grammar;
+  vector<ItemSet*> itemSets;
+
+  Table(Grammar *g) {
+    grammar = g;
+    ItemSet *itemSet = new ItemSet();
+    itemSet->items.push_back(new Item(g->getRule(0),0,g->getEofSymbol()));
+
+  }
+
+  void closure(ItemSet *itemSet) {
+    set<const NonTerminalSymbol*> nts;
+    for(;;)
+    {
+      const NonTerminalSymbol *found = 0;
+      for(int i=0;i<(int)itemSet->items.size();i++) 
+      {
+        const Rule *rule = itemSet->items[i]->rule;
+        int dot = itemSet->items[i]->dot;
+        if(dot<rule->getLength() && rule->getRightSymbol(dot)->isNonTerminal())
+        {
+          const NonTerminalSymbol *nt = dynamic_cast<const NonTerminalSymbol*>(rule->getRightSymbol(dot));
+          if(nts.find(nt) != nts.end()) continue;
+          found = nt;
+          break;        
+        }
+      }
+      if(found==0) break;
+      nts.insert(found);
+      vector<const Rule*> rules;
+      grammar->getRulesByLeftSymbol(rules, found->getName());
+      for(int i=0;i<(int)rules.size();i++) {
+        bool alreadyThere = false;
+        for(int j=0;j<(int)itemSet->items.size();j++) 
+        {
+          // if(itemSet->items[j]->dot == 0 && itemSet->items[j]->rule
+        }
+      }
+    }
+  }
+
+};
+/*
+Item next(const Item &item) {
+  Item nextItem(item.rule, item.dot+1, item.la);
+}
+*/
+
+
+
+
+int main10()
+{
+  Grammar *g = new Grammar();
+  RuleBuilder(g,"E").n("L").t("=").n("R").end();
+  RuleBuilder(g,"E").n("R").end();
+
+  RuleBuilder(g,"L").t("*").n("R").end();
+  RuleBuilder(g,"L").t("id").end();
+  RuleBuilder(g,"R").n("L").end();
+
+  g->dump(cout);
+
+  Item item(g->getRule(1),0,g->addTerminal(new TokenTypeTerminalSymbol("EOF", Token::T_Eof)));
+  item.dump();
+
+  return 0;
+}
+
+#endif
+
+int main()
+{
+  start();
+  FileTokenizer ft;
+  int count = 0;
+  for(int i=0; i<1;i++)
+  {
+    bool ret = ft.read("../tests/data/test2.cpp");
+    if(ret) count++;
+  }
+  end();
+  cout << count << endl;
+  cout << ft.getLineTextAndArrow(517,7) << endl;
+
+  ft.dumpPosition(cout, 1234);
 
   return 0;
 }

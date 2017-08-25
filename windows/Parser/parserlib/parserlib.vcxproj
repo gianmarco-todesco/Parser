@@ -12,8 +12,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\src\grammar.cpp" />
-    <ClCompile Include="..\..\..\src\grammarbuilder.cpp" />
-    <ClCompile Include="..\..\..\src\parser.cpp" />
     <ClCompile Include="..\..\..\src\token.cpp" />
   </ItemGroup>
   <ItemGroup>
