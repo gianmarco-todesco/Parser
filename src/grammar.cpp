@@ -1,6 +1,6 @@
 #include "grammar.h"
 #include <sstream>
-
+#include <assert.h>
 
 using namespace std;
 
@@ -255,11 +255,15 @@ void NullablesBuilder::build()
 class FirstSetBuilder {
   const Grammar *m_grammar;
   map<string, set<const TerminalSymbol*> > &m_firsts;
+  const set<string> &m_nullables;
+  vector<pair<string, string> > m_links;
 public:
   FirstSetBuilder(
     const Grammar *grammar, 
+    const set<string> &nullables,
     map<string, set<const TerminalSymbol*> > &firsts)
     : m_grammar(grammar)
+    , m_nullables(nullables)
     , m_firsts(firsts)
   {
     initialize();
@@ -269,29 +273,68 @@ public:
 private:
   void initialize();
   void build();
+  bool isNullable(const string &name) const { return m_nullables.find(name) != m_nullables.end(); }
 };
 
 void FirstSetBuilder::initialize()
 {
+  // initialize m_firsts: m_firsts[A] = set()
+  vector<string> ntNames;
+  m_grammar->symbols().getNonTerminalSymbolNames(ntNames);
+  for(vector<string>::iterator it = ntNames.begin(); it != ntNames.end(); ++it)
+    m_firsts[*it] = set<const TerminalSymbol*>();
+
+  // start adding lookaheads to m_firsts[A]; compile links
+  set<pair<string, string> > links;
   for(int i=0;i<m_grammar->getRuleCount();i++)
   {
-    /*
     const Rule *rule = m_grammar->getRule(i);
-    int j = 0;
-    while(j<rule->getLength() 
-      && rule->getRightSymbol(i)->isNonTerminal() 
-      && rule
-    if(rule->getLength()>0 && rule->get) 
-      m_nullables.insert(rule->getLeftSymbol()->getName());
-    else if(!hasTerminals(rule))
-      m_candidates.push_back(rule);
-      */
+    string leftSymbolName = rule->getLeftSymbol()->getName();
+    set<const TerminalSymbol*> &la = m_firsts[leftSymbolName];
+    for(int j=0; j<rule->getLength(); j++)
+    {
+      const Symbol *symbol = rule->getRightSymbol(j);
+      if(symbol->isNonTerminal())
+      {
+        string rightSymbolName = symbol->getName();
+        if(leftSymbolName != rightSymbolName)
+          links.insert(make_pair(leftSymbolName, rightSymbolName));
+        if(!isNullable(rightSymbolName)) break;
+      }
+      else
+      {
+        const TerminalSymbol *t = dynamic_cast<const TerminalSymbol *>(symbol);
+        assert(t != 0);
+        la.insert(t);
+      }
+    }
   }
 
+  // links => m_links
+  m_links.insert(m_links.end(), links.begin(), links.end());
 }
 
 void FirstSetBuilder::build()
 {
+  for(;;)
+  {
+    bool found = false;
+    for(vector<pair<string, string> >::iterator it = m_links.begin(); it != m_links.end(); ++it)
+    {
+      string A = it->first, B = it->second;
+      set<const TerminalSymbol*> &srcLa = m_firsts[B];
+      set<const TerminalSymbol*> &dstLa = m_firsts[A];
+      for(set<const TerminalSymbol*>::iterator tIt = srcLa.begin(); tIt != srcLa.end(); ++tIt)
+      {
+        if(dstLa.find(*tIt)==dstLa.end())
+        {
+          found = true;
+          dstLa.insert(*tIt);
+        }
+      }
+    }
+    if(!found) break;
+  }
 }
 
 
@@ -309,6 +352,7 @@ Grammar::Grammar()
 Grammar::~Grammar()
 {
   clear();
+  m_rootSymbol = 0;
 }
 
 void Grammar::clear()
@@ -316,7 +360,6 @@ void Grammar::clear()
   m_dirty = true;
   for(vector<Rule*>::iterator it=m_rules.begin(); it != m_rules.end(); ++it) delete *it;
   m_rules.clear();
-  m_rootSymbol = 0;
 }
 
 void Grammar::updateRootRule(const NonTerminalSymbol *startSymbol)
@@ -391,9 +434,18 @@ bool Grammar::isNullable(std::string ntName) const
 void Grammar::computeAll() const
 {
   NullablesBuilder nullablesBuilder(this, m_nullables);
+  FirstSetBuilder firstSetsBuilder(this, m_nullables, m_firsts);
   m_dirty = false;
 }
 
+const set<const TerminalSymbol*> &Grammar::getFirstSet(const std::string &ntName) const
+{
+  static const set<const TerminalSymbol*> empty;
+  if(m_dirty) computeAll();
+  map<string, set<const TerminalSymbol*> >::const_iterator it = m_firsts.find(ntName);
+  if(it != m_firsts.end()) return it->second;
+  else return empty;
+}
 
 
 

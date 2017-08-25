@@ -226,6 +226,7 @@ public:
   ~Grammar();
 
   SymbolPool &symbols() { return m_symbols; }
+  const SymbolPool &symbols() const { return m_symbols; }
 
   void clear();
 
@@ -246,6 +247,8 @@ public:
   const std::set<std::string> &getNullables() const;
   bool isNullable(std::string ntName) const;
   bool isNullable(const NonTerminalSymbol *nt) const { return isNullable(nt->getName()); }
+
+  const std::set<const TerminalSymbol*> &getFirstSet(const std::string &ntName) const;
 
 private:
   void updateRootRule(const NonTerminalSymbol *startSymbol);

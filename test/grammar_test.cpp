@@ -283,6 +283,28 @@ TEST_CASE( "Grammar 2", "[grammar]") {
 }
 
 
+TEST_CASE( "Grammar 3", "[grammar]") {
+  REQUIRE(Symbol::getTotalCount() == 0);
+  Grammar *g = new Grammar();
+
+  RuleBuilder(g,"A").t("x").end();
+  REQUIRE(g->getRuleCount()==2);
+  REQUIRE(g->getRule(0)->getLeftSymbol()==g->getRootSymbol());
+  REQUIRE(g->getRootSymbol()!=0);
+  REQUIRE(g->getRootSymbol()->getName() == "_root");
+
+  g->clear();
+  RuleBuilder(g,"A").t("x").end();
+  REQUIRE(g->getRuleCount()==2);
+  REQUIRE(g->getRule(0)->getLeftSymbol()==g->getRootSymbol());
+  REQUIRE(g->getRootSymbol()!=0);
+  REQUIRE(g->getRootSymbol()->getName() == "_root");
+  
+
+  delete g;
+  REQUIRE(Symbol::getTotalCount() == 0);  
+}
+
 TEST_CASE( "Nullables 1", "[grammar]") {
   REQUIRE(Symbol::getTotalCount() == 0);
   Grammar *g = new Grammar();
@@ -339,6 +361,25 @@ TEST_CASE( "Nullables 1", "[grammar]") {
   
   REQUIRE(g->isNullable("A"));
   REQUIRE(!g->isNullable("B"));
+
+  delete g;
+  REQUIRE(Symbol::getTotalCount() == 0);  
+}
+
+
+TEST_CASE( "First sets 1", "[grammar]") {
+  REQUIRE(Symbol::getTotalCount() == 0);
+  Grammar *g = new Grammar();
+
+
+  RuleBuilder(g,"S").t("p").end();
+  RuleBuilder(g,"S").n("A").n("B").end();
+  RuleBuilder(g,"B").t("x").end();
+  RuleBuilder(g,"A").t("y").end();
+  RuleBuilder(g,"A").end();
+
+  const set<const TerminalSymbol*> &firstSet = 
+    g->getFirstSet("S");
 
   delete g;
   REQUIRE(Symbol::getTotalCount() == 0);  
