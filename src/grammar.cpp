@@ -20,6 +20,22 @@ std::ostream &operator<<(std::ostream &out, const Rule &rule) {
   return out;
 }
 
+std::ostream &operator<<(std::ostream &out, const std::pair<const Rule &, int> dottedRule)
+{
+  const Rule &rule = dottedRule.first;
+  int dotPos = dottedRule.second;
+  out << *rule.getLeftSymbol() << " ->";
+  for(int i=0; i<rule.getLength(); i++) 
+  {
+    if(i==dotPos) out << " @";
+    out << " " << *rule.getRightSymbol(i); 
+  }
+  if(dotPos == rule.getLength()) out << " @";
+  return out;
+}
+
+
+
 //=============================================================================
 /*
 KeywordsTerminalSymbol::KeywordsTerminalSymbol(const std::vector<std::string> &keywords) 
@@ -89,7 +105,9 @@ bool KeywordsTerminalSymbol::matches(const Token &token) const
 
 SymbolPool::SymbolPool()
 {
+  m_eof = getTokenTypeTerminalSymbol("EOF", Token::T_Eof);  
 }
+
 
 SymbolPool::~SymbolPool()
 {
@@ -254,17 +272,17 @@ void NullablesBuilder::build()
 
 class FirstSetBuilder {
   const Grammar *m_grammar;
-  map<string, set<const TerminalSymbol*> > &m_firsts;
+  map<string, set<const TerminalSymbol*> > &m_firstSets;
   const set<string> &m_nullables;
   vector<pair<string, string> > m_links;
 public:
   FirstSetBuilder(
     const Grammar *grammar, 
     const set<string> &nullables,
-    map<string, set<const TerminalSymbol*> > &firsts)
+    map<string, set<const TerminalSymbol*> > &firstSets)
     : m_grammar(grammar)
     , m_nullables(nullables)
-    , m_firsts(firsts)
+    , m_firstSets(firstSets)
   {
     initialize();
     build();
@@ -282,7 +300,7 @@ void FirstSetBuilder::initialize()
   vector<string> ntNames;
   m_grammar->symbols().getNonTerminalSymbolNames(ntNames);
   for(vector<string>::iterator it = ntNames.begin(); it != ntNames.end(); ++it)
-    m_firsts[*it] = set<const TerminalSymbol*>();
+    m_firstSets[*it] = set<const TerminalSymbol*>();
 
   // start adding lookaheads to m_firsts[A]; compile links
   set<pair<string, string> > links;
@@ -290,7 +308,7 @@ void FirstSetBuilder::initialize()
   {
     const Rule *rule = m_grammar->getRule(i);
     string leftSymbolName = rule->getLeftSymbol()->getName();
-    set<const TerminalSymbol*> &la = m_firsts[leftSymbolName];
+    set<const TerminalSymbol*> &la = m_firstSets[leftSymbolName];
     for(int j=0; j<rule->getLength(); j++)
     {
       const Symbol *symbol = rule->getRightSymbol(j);
@@ -322,8 +340,8 @@ void FirstSetBuilder::build()
     for(vector<pair<string, string> >::iterator it = m_links.begin(); it != m_links.end(); ++it)
     {
       string A = it->first, B = it->second;
-      set<const TerminalSymbol*> &srcLa = m_firsts[B];
-      set<const TerminalSymbol*> &dstLa = m_firsts[A];
+      set<const TerminalSymbol*> &srcLa = m_firstSets[B];
+      set<const TerminalSymbol*> &dstLa = m_firstSets[A];
       for(set<const TerminalSymbol*>::iterator tIt = srcLa.begin(); tIt != srcLa.end(); ++tIt)
       {
         if(dstLa.find(*tIt)==dstLa.end())
@@ -434,7 +452,7 @@ bool Grammar::isNullable(std::string ntName) const
 void Grammar::computeAll() const
 {
   NullablesBuilder nullablesBuilder(this, m_nullables);
-  FirstSetBuilder firstSetsBuilder(this, m_nullables, m_firsts);
+  FirstSetBuilder firstSetsBuilder(this, m_nullables, m_firstSets);
   m_dirty = false;
 }
 
@@ -442,8 +460,8 @@ const set<const TerminalSymbol*> &Grammar::getFirstSet(const std::string &ntName
 {
   static const set<const TerminalSymbol*> empty;
   if(m_dirty) computeAll();
-  map<string, set<const TerminalSymbol*> >::const_iterator it = m_firsts.find(ntName);
-  if(it != m_firsts.end()) return it->second;
+  map<string, set<const TerminalSymbol*> >::const_iterator it = m_firstSets.find(ntName);
+  if(it != m_firstSets.end()) return it->second;
   else return empty;
 }
 

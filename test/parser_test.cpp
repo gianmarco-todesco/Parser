@@ -5,6 +5,8 @@
 
 using namespace std;
 
+
+/*
 Grammar *makeTestGrammar1()
 {
   Grammar *g = new Grammar();
@@ -53,7 +55,7 @@ TEST_CASE( "ParseState1", "[parser]") {
   Grammar *g = makeTestGrammar1();
 
   {
-    ParseState state(g, "Sum");
+    ParserState state(g, "Sum");
     REQUIRE(state.getGrammar() == g);
     
     REQUIRE(state.getSignature() == "1,0;2,0;3,0;4,0;5,0;");
@@ -256,4 +258,126 @@ TEST_CASE( "Parser2", "[parser]") {
 
   delete g;
 
+}
+*/
+
+
+TEST_CASE( "Parser1", "[parser]") {
+
+  Grammar g;
+  RuleBuilder(&g,"Sum").n("Var").end(RuleAction("add"));
+  RuleBuilder(&g,"Sum").n("Sum").t("+").n("Var").end(RuleAction("add",1+4));
+  RuleBuilder(&g,"Var").t("x").end(RuleAction("var1",0));
+  RuleBuilder(&g,"Var").t("y").end(RuleAction("var2",0));
+  RuleBuilder(&g,"Var").t("z").end(RuleAction("var3",0));
+
+  Parser parser(&g);
+  parser.setSkipNewLines(true);
+  StringTokenizer st("x+y+z");
+  parser.parse(&st);
+  REQUIRE(parser.getParseTree()->toString() == "add(var1(),var2(),var3())");  
+}
+
+
+TEST_CASE( "Parser2", "[parser]") {
+
+  Grammar g;
+  RuleBuilder(&g,"E").n("T").end();
+  RuleBuilder(&g,"E").n("E").t("+").n("T").end(RuleAction("add",1+4));
+  RuleBuilder(&g,"T").n("F").end();
+  RuleBuilder(&g,"T").n("T").t("*").n("F").end(RuleAction("mul",1+4));
+  RuleBuilder(&g,"F").n("V").end();
+  RuleBuilder(&g,"F").t("(").n("E").t(")").end();
+  RuleBuilder(&g,"V").t("x").end(RuleAction("var1",0));
+  RuleBuilder(&g,"V").t("y").end(RuleAction("var2",0));
+  RuleBuilder(&g,"V").t("z").end(RuleAction("var3",0));
+  Parser parser(&g);
+  parser.setSkipNewLines(true);
+
+  const string tb[][2] = {
+    {"x", "var1()"},
+    {"x+y", "add(var1(),var2())"},
+    {"x*y", "mul(var1(),var2())"},
+    {"x+y+z", "add(var1(),var2(),var3())"},
+    {"x*y*z", "mul(var1(),var2(),var3())"},
+    {"x*y+z", "add(mul(var1(),var2()),var3())"},
+    {"x+y*z", "add(var1(),mul(var2(),var3()))"},
+    {"(x+y)", "add(var1(),var2())"},
+    {"(x+y)*z", "mul(add(var1(),var2()),var3())"},
+    {"x*(y+z)", "mul(var1(),add(var2(),var3()))"},
+    {"x+y+z + x+y+z + x+y+z + x+y+z", "add("
+                                      "var1(),var2(),var3(),"
+                                      "var1(),var2(),var3(),"
+                                      "var1(),var2(),var3(),"
+                                      "var1(),var2(),var3())"},
+    {"",""}
+  };
+
+  for(int i=0;tb[i][0] != "";i++)
+  {
+
+    StringTokenizer st(tb[i][0]);
+    bool ret = parser.parse(&st);
+    REQUIRE(ret == true);
+    REQUIRE(parser.getParseTree()->toString() == tb[i][1]);
+  }
+
+}
+
+
+
+TEST_CASE( "Parser3", "[parser]") {
+
+  Grammar g;
+  RuleBuilder(&g,"E").n("E").t("+").n("T").end(RuleAction("add",1+4));
+  RuleBuilder(&g,"E").n("T").end();
+  RuleBuilder(&g,"T").n("T").t("*").n("F").end(RuleAction("mul",1+4));
+  RuleBuilder(&g,"T").n("F").end();
+  RuleBuilder(&g,"F").id().end(RuleAction("pass",1));
+  RuleBuilder(&g,"F").t("(").n("E").t(")").end();
+
+  Parser parser(&g);
+  parser.setSkipNewLines(true);
+
+  const string tb[][2] = {
+    {"id", "'id'"},
+    {"x+y", "add('x','y')"},
+    {"x*y", "mul('x','y')"},
+    {"x+y+z", "add('x','y','z')"},
+    {"x*y*z", "mul('x','y','z')"},
+    {"x*y+z", "add(mul('x','y'),'z')"},
+    {"x+y*z", "add('x',mul('y','z'))"},
+    {"(x+y)", "add('x','y')"},
+    {"(x+y)*z", "mul(add('x','y'),'z')"},
+    {"x*(y+z)", "mul('x',add('y','z'))"},
+    {"x+y+z + x+y+z + x+y+z + x+y+z", "add('x','y','z','x','y','z','x','y','z','x','y','z')"},
+    {"",""}
+  };
+
+  for(int i=0;tb[i][0] != "";i++)
+  {
+    StringTokenizer st(tb[i][0]);
+    bool ret = parser.parse(&st);
+    REQUIRE(ret == true);
+    REQUIRE(parser.getParseTree()->toString() == tb[i][1]);
+  }
+}
+
+
+TEST_CASE( "Parser4", "[parser]") {
+
+  Grammar g;
+  RuleBuilder(&g,"A").end(RuleAction("A->",0));
+  RuleBuilder(&g,"A").n("C").t("x").n("A").end(RuleAction("A->CxA",1+4));
+  RuleBuilder(&g,"B").t("x").n("C").t("y").end(RuleAction("B->xCy",2));
+  RuleBuilder(&g,"B").t("x").n("C").end(RuleAction("B->xC",2));
+  RuleBuilder(&g,"C").t("x").n("B").t("x").end(RuleAction("C->xBx",2));
+  RuleBuilder(&g,"C").t("z").end(RuleAction("C->z",0));
+
+  Parser parser(&g);
+  parser.setSkipNewLines(true);
+  StringTokenizer st("x x z x x");
+  bool ret = parser.parse(&st);
+  REQUIRE(ret);
+  REQUIRE(parser.getParseTree()->toString() == "A->CxA(C->xBx(B->xC(C->z())),A->())");  
 }

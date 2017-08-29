@@ -131,6 +131,7 @@ protected:
 class SymbolPool {
   std::map<std::string, NonTerminalSymbol*> m_ntSymbols;
   std::map<std::string, TerminalSymbol*> m_tSymbols;
+  TerminalSymbol *m_eof;
 public:
   SymbolPool();
   ~SymbolPool();
@@ -143,7 +144,7 @@ public:
   const TerminalSymbol* getQuotedStringTerminalSymbol()  { return getTokenTypeTerminalSymbol("qstring", Token::T_QuotedString); }
   const TerminalSymbol* getSpecialTerminalSymbol()  { return getTokenTypeTerminalSymbol("special", Token::T_Special); }
   const TerminalSymbol* getEolTerminalSymbol() { return getTokenTypeTerminalSymbol("EOL", Token::T_Eol); }
-  const TerminalSymbol* getEofTerminalSymbol() { return getTokenTypeTerminalSymbol("EOF", Token::T_Eof); }
+  const TerminalSymbol* getEofTerminalSymbol() const { return m_eof; }
   const TerminalSymbol* getAnyTerminalSymbol();
 
   const NonTerminalSymbol* nt(const std::string &name) { return getNonTerminalSymbol(name); }
@@ -208,6 +209,7 @@ public:
 };
 
 std::ostream &operator<<(std::ostream &out, const Rule &rule);
+std::ostream &operator<<(std::ostream &out, const std::pair<const Rule &, int> dottedRule);
 
 
 //
@@ -218,7 +220,7 @@ class Grammar {
   std::vector<Rule*> m_rules;
   const NonTerminalSymbol *m_rootSymbol;
   mutable std::set<std::string> m_nullables;
-  mutable std::map<std::string, std::set<const TerminalSymbol*> > m_firsts;
+  mutable std::map<std::string, std::set<const TerminalSymbol*> > m_firstSets;
   mutable bool m_dirty;
 
 public:
