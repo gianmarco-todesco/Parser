@@ -7,57 +7,63 @@ using namespace std;
 
 
 
-TEST_CASE( "GrammarDefinitionGrammar", "[ugh]") {
-  /*
+TEST_CASE( "grammar builder 1", "[grammarbuilder]") {
   REQUIRE(Symbol::getTotalCount()==0);
+  SECTION("body")
   {
+    
     StringTokenizer st(
-        "A -> B\n"
-        "A -> A B\n"
-        "B -> 'x'\n"
-        "B -> 'y'\n"
-        "B -> 'z'\n"
-        );
+          "A -> B\n"
+          "A -> A B\n"
+          "B -> 'x'\n"
+          "B -> 'y'\n"
+          "B -> 'z'\n"
+          );
 
     GrammarBuilder gb;
     Grammar *g = gb.build(&st);
 
-    TerminalSymbol *eof = g->addTerminal(
-      new TokenTypeTerminalSymbol("EOF", Token::T_Eof));
-    RuleBuilder(g,"S").n("A").t(eof).end();
-
-    for(int i=0;i<g->getRuleCount();i++)
-    {
-      const Rule *rule = g->getRule(i);
-      cout << *rule << endl;
-    }
+    // g->dump(cout);
 
     StringTokenizer st2("x y z z");
-    Parser parser(g, "S");
+    st2.foobar();
+    Parser parser(g);
     bool ret = parser.parse(&st2);
-    if(ret) 
-    {
-      parser.getParseTree()->dump(cout);
-    }
-
+    REQUIRE(ret);
+    REQUIRE(parser.getParseTree()->toString() == "A(B('x'),B('y'),B('z'),B('z'))");
     delete g;
   }
   REQUIRE(Symbol::getTotalCount()==0);
-  */
+}
 
 
-  /*
-  GrammarDefinitionParser parser;
-  const Grammar *grammar = parser.getGrammar();
-  for(int i=0;i<grammar->getRuleCount(); i++)
+
+TEST_CASE( "grammar builder 2", "[grammarbuilder]") {
+  REQUIRE(Symbol::getTotalCount()==0);
+  SECTION("body")
   {
-    const Rule *rule = grammar->getRule(i);
-    cout << *rule << endl;
+    
+    StringTokenizer st(
+          "A -> C 'x' A\n"
+          "A -> \n"
+          "B -> 'x' C 'y'\n"
+          "B -> 'x' C \n"
+          "C -> 'x' B 'x'\n"
+          "C -> 'z'\n"
+          );
+
+    GrammarBuilder gb;
+    Grammar *g = gb.build(&st);
+
+    // g->dump(cout);
+
+    
+    StringTokenizer st2("x x z x x");
+    st2.foobar();
+    Parser parser(g);
+    bool ret = parser.parse(&st2);
+    REQUIRE(ret);
+    delete g;
   }
-
-  bool ret = parser.parse(&st);
-  if(ret) 
-    cout << parser.getOutput()->toString().c_str() << endl;
-    */
-
+  REQUIRE(Symbol::getTotalCount()==0);
 }

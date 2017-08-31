@@ -14,12 +14,16 @@
     <ClCompile Include="..\..\..\src\grammar.cpp" />
     <ClCompile Include="..\..\..\src\grammarbuilder.cpp" />
     <ClCompile Include="..\..\..\src\parser.cpp" />
+    <ClCompile Include="..\..\..\src\parsertable.cpp" />
+    <ClCompile Include="..\..\..\src\parsetree.cpp" />
     <ClCompile Include="..\..\..\src\token.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\include\grammar.h" />
     <ClInclude Include="..\..\..\include\grammarbuilder.h" />
     <ClInclude Include="..\..\..\include\parser.h" />
+    <ClInclude Include="..\..\..\include\parsertable.h" />
+    <ClInclude Include="..\..\..\include\parsetree.h" />
     <ClInclude Include="..\..\..\include\token.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
@@ -50,6 +54,9 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <IncludePath>..\..\..\include\;$(IncludePath)</IncludePath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <IncludePath>..\..\..\include\;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">

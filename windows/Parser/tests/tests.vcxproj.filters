@@ -24,6 +24,12 @@
     <ClCompile Include="..\..\..\test\grammar_test.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\test\parser_table_test.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\test\parse_tree_test.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\..\test\parser_test.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
