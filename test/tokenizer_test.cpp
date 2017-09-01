@@ -85,7 +85,6 @@ TEST_CASE( "StringTokenizer 1", "[token]" ) {
     Token(Token::T_Special,"<"),
     Token(Token::T_Number,"67"),
     Token(Token::T_Special,">"),
-    Token(Token::T_Eol),
     Token(Token::T_Eof),
     Token()
   };
@@ -94,11 +93,10 @@ TEST_CASE( "StringTokenizer 1", "[token]" ) {
   Token tokens2[] = {
     Token(Token::T_QuotedString,"'hello'"),
     Token(Token::T_QuotedString,"'\"'"),
-    Token(Token::T_QuotedString,"'\\''"),
+    Token(Token::T_QuotedString,"'\''"),
     Token(Token::T_QuotedString,"\"hello\""),
     Token(Token::T_QuotedString,"\"'\""),
-    Token(Token::T_QuotedString,"\"\\\"\""),
-    Token(Token::T_Eol),
+    Token(Token::T_QuotedString,"\"\"\""),
     Token(Token::T_Eof),
     Token()
   };
@@ -107,7 +105,6 @@ TEST_CASE( "StringTokenizer 1", "[token]" ) {
   Token tokens3[] = {
     Token(Token::T_Eol),
     Token(Token::T_Ident,"hello"),
-    Token(Token::T_Eol),
     Token(Token::T_Eol),
     Token(Token::T_Eol),
     Token(Token::T_Eol),
@@ -124,7 +121,6 @@ TEST_CASE( "StringTokenizer 1", "[token]" ) {
     Token(Token::T_Eol),
     Token(Token::T_Ident,"last"),
     Token(Token::T_Ident,"line"),
-    Token(Token::T_Eol),
     Token(Token::T_Eof),
     Token()
   };
@@ -159,14 +155,14 @@ TEST_CASE( "FileTokenizer 1", "[token]" ) {
 TEST_CASE( "StringTokenizer 2", "[token]" ) {
   StringTokenizer st("  Hello, World! \nSecond line");
   const std::vector<Token> &tokens = st.getTokens();
-  REQUIRE(tokens.size() == 9);
+  REQUIRE(tokens.size() == 8);
   REQUIRE(st.getLineCount() == 2);
   int ps[][2] = {
     {1,3},{1,8},{1,10},{1,15},{1,17},
-    {2,1},{2,8},{2,12},
+    {2,1},{2,8},
     {3,1}
   };
-  for(int i=0;i<9;i++)
+  for(int i=0;i<8;i++)
   {
     pair<int,int> linePos = st.getLineAndColumn(i);
     REQUIRE(linePos.first == ps[i][0]);
@@ -207,7 +203,7 @@ TEST_CASE( "FileTokenizer 2", "[token]" ) {
 TEST_CASE( "StringTokenizer 3", "[token]" ) {
   StringTokenizer st("  Hello, World! \nSecond line\n\tthe last one!");
   const std::vector<Token> &tokens = st.getTokens();
-  REQUIRE(tokens.size() == 14);
+  REQUIRE(tokens.size() == 13);
   string la = st.getLineTextAndArrow(3,6);
   REQUIRE(la == "\tthe last one!\n\t    ^\n");
   la = st.getLineTextAndArrow(2,12);
@@ -247,3 +243,15 @@ TEST_CASE( "FileTokenizer 3", "[token]" ) {
 
 }
 
+
+
+TEST_CASE( "StringTokenizer 4", "[token]" ) {
+  StringTokenizer st("'ciao' '\\\\' '\n' \"\\\"\"");
+  const std::vector<Token> &tokens = st.getTokens();
+  REQUIRE(tokens.size() == 5);
+  REQUIRE(tokens[0].getText() == "'ciao'");
+  REQUIRE(tokens[1].getText() == "'\\'");
+  REQUIRE(tokens[2].getText() == "'\n'");
+  REQUIRE(tokens[3].getText() == "\"\"\"");
+
+}

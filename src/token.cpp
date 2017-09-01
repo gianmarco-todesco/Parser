@@ -94,13 +94,22 @@ namespace {
     char q = buffer[pos];
     if(q!='"' && q!='\'') return false;
     pos++;
+    qstring = "";
+    qstring.push_back(q);
     while(pos<n && buffer[pos] != q)
     {
-      if(buffer[pos]=='\\') pos++;
-      if(pos<n) pos++;
+      if(pos+1<n && buffer[pos]=='\\')
+      {
+        qstring.push_back(buffer[pos+1]);
+        pos+=2;
+      }
+      else 
+      {
+        qstring.push_back(buffer[pos]);
+        pos++;
+      }
     }
-    if(pos<n && buffer[pos] == q) pos++;
-    qstring = buffer.substr(startPos, pos-startPos);
+    if(pos<n && buffer[pos] == q) { qstring.push_back(q); pos++; }
     return true;
   }
   
@@ -116,7 +125,9 @@ void BaseTokenizer::addToken(Token::Type type, const std::string &value, const s
   m_tokens.push_back(token);
   if(m_newLine)
   {
-    m_lines.push_back(make_pair(token.getPosition(), ++m_lineCount));
+    m_lines.push_back(token.getPosition()); 
+    ++m_lineCount;
+    assert(m_lines.size() == m_lineCount);
     if(token.isEof()) --m_lineCount;
   }
   m_newLine = token.isEol();
@@ -164,10 +175,6 @@ void BaseTokenizer::readLine(const std::string &buffer)
     }
     addToken(type,value,spaces);
   }
-  // last EOL
-  addToken(Token::T_Eol,"",spaces);
-  // EOF
-  addToken(Token::T_Eof,"","");
 }
 
 
@@ -177,19 +184,19 @@ pair<int, int> BaseTokenizer::getLineAndColumn(Token::Position tokenPosition) co
   if(m_tokens.empty() || m_lines.empty()) return make_pair(0,0);
   if(tokenPosition<=0) return make_pair(1,m_tokens.front().getSpaces().length()+1);
   else if(tokenPosition>=(Token::Position)m_tokens.size()-1) return make_pair(m_lineCount+1,1);
-  assert(m_lines.front().first <= tokenPosition && tokenPosition<m_lines.back().first);
+  assert(m_lines.front() <= tokenPosition && tokenPosition<m_lines.back());
   int a = 0, b = m_lines.size()-1;
   while(b-a>1)
   {
     int c = (a+b)/2;
-    if(m_lines[c].first <= tokenPosition) a=c;
+    if(m_lines[c] <= tokenPosition) a=c;
     else b=c;
   }
-  assert(m_lines[a].first <= tokenPosition && tokenPosition<m_lines[b].first);
+  assert(m_lines[a] <= tokenPosition && tokenPosition<m_lines[b]);
   assert(b-a==1);
-  int lineNumber = m_lines[a].second;
+  int lineNumber = a+1;
   int columnNumber = 1;
-  int j = m_lines[a].first;
+  int j = m_lines[a];
   while(j<tokenPosition) 
   {
     columnNumber += m_tokens[j].getSpaces().length() + m_tokens[j].getText().length();
@@ -213,21 +220,21 @@ std::string BaseTokenizer::getLineText(int lineNumber) const
   {
     a = 0;
     int b = (int)m_lines.size()-1;
-    assert(m_lines[a].second<=lineNumber && lineNumber<m_lines[b].second);
+    assert(a+1<=lineNumber && lineNumber<b+1);
     while(b-a>1)
     {
       int c=(a+b)/2;
-      if(m_lines[c].second<=lineNumber) a=c;
+      if(c+1<=lineNumber) a=c;
       else b=c;
     }
     assert(b-a==1);
-    assert(m_lines[a].second<=lineNumber && lineNumber<m_lines[b].second);
+    assert(a+1<=lineNumber && lineNumber<b+1);
   }
-  int t0 = m_lines[a].first;
+  int t0 = m_lines[a];
   assert(a+1<(int)m_lines.size());
-  int t1 = m_lines[a+1].first-1;
+  int t1 = m_lines[a+1]-1;
   assert(t0<=t1);
-  assert(m_tokens[t1].isEol());
+  assert(m_tokens[t1].isEol() || m_tokens[t1].isEof());
   string line = "";
   for(int t=t0;t<t1;t++)
   {
@@ -255,6 +262,14 @@ std::string BaseTokenizer::getLineTextAndArrow(int lineNumber, int columnNumber)
 
 //=============================================================================
 
+StringTokenizer::StringTokenizer(const string &buffer) 
+  : m_buffer(buffer)
+{ 
+  readLine(m_buffer); 
+  addToken(Token::T_Eof,"","");
+  m_lines.push_back(m_tokens.size());
+}
+
 void StringTokenizer::dumpPosition(std::ostream &out, Token::Position tokenPosition) const
 {
   pair<int, int> rc = getLineAndColumn(tokenPosition);
@@ -265,15 +280,6 @@ void StringTokenizer::dumpPosition(std::ostream &out, Token::Position tokenPosit
   out << lineAndArrow;
 }
 
-void StringTokenizer::foobar()
-{
-  int n = (int)m_tokens.size();
-  if(n>=2)
-  {
-    m_tokens[n-2]=m_tokens[n-1];
-    m_tokens.pop_back();
-  }
-}
 
 //-----------------------------------------------------------------------------
 
@@ -289,10 +295,11 @@ bool FileTokenizer::read(const std::string &filepath)
   ifstream f(m_filepath.c_str());
   if(!f) return false;
   std::string text;
+
   while(std::getline(f,text)) 
   {
     readLine(text);
-    m_tokens.pop_back();
+    addToken(Token::T_Eol,"","");    
   }
   addToken(Token::T_Eof,"","");
   return true;
@@ -309,59 +316,3 @@ void FileTokenizer::dumpPosition(std::ostream &out, Token::Position tokenPositio
   string lineAndArrow = getLineTextAndArrow(rc);
   out << lineAndArrow;
 }
-
-/*
-std::string StringTokenizer::getLocation(long int tokenPos) const
-{
-  strstream ss;
-  ss << " at " << (c+1) << '\0';
-  return ss.str();
-}
-
-//-----------------------------------------------------------------------------
-
-void FileTokenizer::read()
-{
-  
-}
-
-//-----------------------------------------------------------------------------
-
-std::string FileTokenizer::getLocation(long int tokenPos) const 
-{
-  int lineFirstTokenPos, lineNumber;
-  if(tokenPos<=0) lineFirstTokenPos = lineNumber = 0;
-  else if(tokenPos>=m_lines.back().first) 
-  {
-    lineFirstTokenPos = m_lines.back().first;
-    lineNumber = m_lines.back().second;
-  }
-  else
-  {
-    int a=0, b=(int)m_lines.size()-1;
-    // assert(m_lines[a].first<=tokenPos && tokenPos<m_lines[b].first);
-    while(b-a>1)
-    {
-      int c = (a+b)/2;
-      if(m_lines[c].first<=tokenPos) a=c; else b=c;
-    }
-    lineFirstTokenPos = m_lines[a].first;
-    lineNumber = m_lines[a].second;
-  }
-
-  int col = 0;
-  int i = lineFirstTokenPos;
-  while(i<(int)m_tokens.size() && i<tokenPos) 
-  { 
-    const Token &token = m_tokens[i];
-    col += token.getSpaces().length() + token.getText().length();
-    i++;
-  }
-  if(i==tokenPos) col += m_tokens[i].getSpaces().length();
-
-  strstream ss;
-  ss << "at line " << (lineNumber+1) << ", col " << (col+1) << '\0';
-  return ss.str();
-}
-
-*/

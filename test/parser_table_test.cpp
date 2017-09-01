@@ -17,7 +17,7 @@ TEST_CASE( "ParserTable 1", "[parsertable]") {
   RuleBuilder(&g,"V").t("z").end();
 
   ParserState s0(&g);
-  s0.dump();
+  // s0.dump();
   
 }
 
@@ -32,13 +32,13 @@ TEST_CASE( "ParserTable 2", "[parsertable]") {
   RuleBuilder(&g,"F").t("id").end();
 
   ParserState s0(&g);
-  s0.dump();
+  //s0.dump();
 
   ParserState s1(s0, g.symbols().t("("));
-  s1.dump();
+  //s1.dump();
 
   ParserState s2(s1, g.symbols().t("id"));
-  s2.dump();
+  //s2.dump();
   
 }
 
@@ -54,7 +54,7 @@ TEST_CASE( "ParserTable 3", "[parsertable]") {
   ParserTable table(&g);
   for(int i=0;i<table.getStateCount();i++)
   {
-    table.getState(i)->dump();
+    //table.getState(i)->dump();
   }
   
 }

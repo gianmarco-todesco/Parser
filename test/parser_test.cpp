@@ -274,7 +274,8 @@ TEST_CASE( "Parser1", "[parser]") {
   Parser parser(&g);
   parser.setSkipNewLines(true);
   StringTokenizer st("x+y+z");
-  parser.parse(&st);
+  bool ret = parser.parse(&st);
+  REQUIRE(ret);
   REQUIRE(parser.getParseTree()->toString() == "add(var1(),var2(),var3())");  
 }
 
@@ -381,3 +382,44 @@ TEST_CASE( "Parser4", "[parser]") {
   REQUIRE(ret);
   REQUIRE(parser.getParseTree()->toString() == "A->CxA(C->xBx(B->xC(C->z())),A->())");  
 }
+
+TEST_CASE( "Parser5", "[parser]") {
+  Grammar g;
+  RuleBuilder(&g,"A").end(RuleAction("A"));
+  RuleBuilder(&g,"A").n("A").any().end(RuleAction("A",1+2));
+
+  Parser parser(&g);
+  parser.setSkipNewLines(true);
+  StringTokenizer st("uno due tre");
+  bool ret = parser.parse(&st);
+  REQUIRE(ret);
+  REQUIRE(parser.getParseTree()->toString() == "A('uno','due','tre')");
+}
+
+
+TEST_CASE( "Parser6", "[parser]") {
+  Grammar g;
+  RuleBuilder(&g,"StatList").end(RuleAction("Lst"));
+  RuleBuilder(&g,"StatList").n("StatList").n("Stat").end(RuleAction("Lst",1+2));
+
+  RuleBuilder(&g,"Stat").t("#").t("define").id().n("DefineBody").eol().end(RuleAction("Define",4+8));
+
+  RuleBuilder(&g,"DefineBody").end(RuleAction("Body"));
+  RuleBuilder(&g,"DefineBody").n("DefineBody").any().end(RuleAction("Body",1+2));
+  RuleBuilder(&g,"DefineBody").n("DefineBody").t("\\").eol().end(RuleAction("Body",1+2));
+
+
+  Parser parser(&g);
+  parser.setSkipNewLines(true);
+  StringTokenizer st("\n\n#define PIPPO uno, due, tre\n#define TRE 3\n#define MULTILINE one//\ntwo\n");
+  bool ret = parser.parse(&st);
+  REQUIRE(ret);
+  ParseNode root = parser.getParseTree()->getNode(0);
+  REQUIRE(root.getTag() == "Lst");
+  REQUIRE(root.getChildCount() == 3);
+  REQUIRE(root.getChild(0).toString() == "Define('PIPPO',Body('uno',',','due',',','tre'))");
+  REQUIRE(root.getChild(1).toString() == "Define('TRE',Body(3))");
+ 
+  // cout << root.toString() << endl;
+}
+

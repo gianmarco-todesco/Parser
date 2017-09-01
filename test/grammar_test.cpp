@@ -15,8 +15,9 @@ TEST_CASE( "SymbolTotalCount", "[grammar]") {
   REQUIRE(Symbol::getTotalCount() == 0);
   {
     SymbolPool pool;
+    REQUIRE(Symbol::getTotalCount() == 2);  
     pool.getNonTerminalSymbol("A");
-    REQUIRE(Symbol::getTotalCount() == 1);  
+    REQUIRE(Symbol::getTotalCount() == 3);  
   }
   REQUIRE(Symbol::getTotalCount() == 0);  
 }
@@ -27,6 +28,7 @@ TEST_CASE( "NonTerminalSymbol", "[grammar]") {
   SECTION("body")
   {
     SymbolPool pool;
+    REQUIRE(Symbol::getTotalCount() == 2);  
     const NonTerminalSymbol *s = pool.getNonTerminalSymbol("A");
     REQUIRE(s->isTerminal()==false);
     REQUIRE(s->isConstant()==false);
@@ -37,7 +39,7 @@ TEST_CASE( "NonTerminalSymbol", "[grammar]") {
     REQUIRE(s1 == s);
     s1 = pool.getNonTerminalSymbol("B");
     REQUIRE(s1 != s);
-    REQUIRE(Symbol::getTotalCount() == 2);    
+    REQUIRE(Symbol::getTotalCount() == 4);    
   }
   REQUIRE(Symbol::getTotalCount() == 0);
 }
@@ -97,21 +99,6 @@ TEST_CASE( "NumberTerminalSymbol", "[grammar]") {
   REQUIRE(Symbol::getTotalCount() == 0);
 }
 
-/*
-TEST_CASE( "KeywordsTerminalSymbol", "[grammar]") {
-  REQUIRE(Symbol::getTotalCount() == 0);
-  KeywordsTerminalSymbol symbol("a","b","c");
-  REQUIRE(symbol.isTerminal()==true);
-  REQUIRE(symbol.isConstant()==false);
-  REQUIRE(symbol.matches(Token(Token::T_Ident, "A"))==false);
-  REQUIRE(symbol.matches(Token(Token::T_Ident, "d"))==false);
-  REQUIRE(symbol.matches(Token(Token::T_Ident, "a"))==true);
-  REQUIRE(symbol.matches(Token(Token::T_Ident, "b"))==true);
-  REQUIRE(symbol.matches(Token(Token::T_Ident, "c"))==true);
-  REQUIRE(symbol.getName() == "['a', 'b', 'c']");
-  REQUIRE(toString(symbol) == symbol.getName());
-}
-*/
 
 
 TEST_CASE( "AnyTerminalSymbol", "[grammar]") {
@@ -125,6 +112,7 @@ TEST_CASE( "AnyTerminalSymbol", "[grammar]") {
     REQUIRE(symbol.matches(Token(Token::T_Ident, "A"))==true);
     REQUIRE(symbol.matches(Token(Token::T_Number, "12.34"))==true);
     REQUIRE(symbol.matches(Token(Token::T_Special, ";"))==true);
+    REQUIRE(symbol.matches(Token(Token::T_Eof))==false);
     REQUIRE(symbol.getName() == "any");
     REQUIRE(toString(symbol) == symbol.getName());
   }

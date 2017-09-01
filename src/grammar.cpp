@@ -37,75 +37,12 @@ std::ostream &operator<<(std::ostream &out, const std::pair<const Rule &, int> d
 
 
 //=============================================================================
-/*
-KeywordsTerminalSymbol::KeywordsTerminalSymbol(const std::vector<std::string> &keywords) 
-  : TerminalSymbol("")
-  , m_keywords(keywords)
-{
-  buildName();
-}
-
-
-KeywordsTerminalSymbol::KeywordsTerminalSymbol(const std::string &kw1, const std::string &kw2)
-  : TerminalSymbol("")
-{
-  m_keywords.push_back(kw1);
-  m_keywords.push_back(kw2);
-  buildName();
-}
-
-KeywordsTerminalSymbol::KeywordsTerminalSymbol(const std::string &kw1, const std::string &kw2, const std::string &kw3)
-  : TerminalSymbol("")
-{
-  m_keywords.push_back(kw1);
-  m_keywords.push_back(kw2);
-  m_keywords.push_back(kw3);
-  buildName();
-}
-
-KeywordsTerminalSymbol::KeywordsTerminalSymbol(const std::string &kw1, const std::string &kw2, 
-                                               const std::string &kw3, const std::string &kw4)
-  : TerminalSymbol("")
-{
-  m_keywords.push_back(kw1);
-  m_keywords.push_back(kw2);
-  m_keywords.push_back(kw3);
-  m_keywords.push_back(kw4);
-  buildName();
-}
-
-
-void KeywordsTerminalSymbol::buildName()
-{
-  ostringstream os;
-  os << "[";
-  for(vector<string>::iterator it = m_keywords.begin(); it != m_keywords.end(); ++it)
-  {
-    if(it != m_keywords.begin()) os << ", ";
-    os << "'" << *it << "'";
-  }
-  os << "]";
-  setName(os.str());
-}
-
-
-
-bool KeywordsTerminalSymbol::matches(const Token &token) const
-{
-  for(vector<string>::const_iterator it = m_keywords.begin(); it != m_keywords.end(); ++it)
-  {
-    if(*it == token.getText()) return true;
-  }
-  return false;
-}
-
-*/
-//=============================================================================
 
 
 SymbolPool::SymbolPool()
 {
   m_eof = getTokenTypeTerminalSymbol("EOF", Token::T_Eof);  
+  m_eol = getTokenTypeTerminalSymbol("EOL", Token::T_Eol);   
 }
 
 

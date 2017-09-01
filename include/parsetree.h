@@ -16,11 +16,15 @@ public:
   ParseTree(const BaseTokenizer *tokenizer);
   ~ParseTree();
 
-  void addLeaf(int tokenIndex);
-  void removeItems(int count);
+  void addLeaf(int tokenIndex); 
+  // note: normally leaf are added consecutively, but comments can be skipped. This is why we need an argument
+
   void makeNode(const std::string &tag, int count, unsigned long mask = 0xffffffffL);
   void takeOne(int count, int index);
-  
+  /*
+  void removeItems(int count);
+  */
+
   int getStackSize() const { return (int)m_stack.size(); }
 
   // get the index-th last node on the stack
@@ -58,6 +62,10 @@ public:
   std::string getTag() const { return m_parseTree->getTag(*this); }
   bool isLeaf() const { return m_parseTree->isLeaf(*this); }
   int getChildCount() const { return m_parseTree->getChildCount(*this); }
+
+  std::string toString() const; // used mainly for debugging
+
+  std::string getText(bool includeLeadingSpace = false) const;
 };
 
 

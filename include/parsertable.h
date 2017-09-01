@@ -21,6 +21,8 @@ class ParserState {
   std::vector<const TerminalSymbol*> m_currentTerminals;
   std::vector<std::pair<const Rule*, LookAhaedSet> > m_completeRules;
 
+  bool m_matchesEol;
+
 public:
 
   // Build the first state
@@ -45,6 +47,7 @@ public:
 
   int getTerminals(std::vector<const TerminalSymbol*> &terminals, const Token &token) const;
   int getCompleteRules(std::vector<const Rule*> &rules, const Token &token) const;
+  int getExpected(std::vector<const TerminalSymbol*> &expected) const;
 
   const ParserState *getNextState(const Symbol*symbol) const { 
     std::map<const Symbol*, const ParserState*>::const_iterator it = m_links.find(symbol);
@@ -54,12 +57,13 @@ public:
     m_links[symbol] = nextState; 
   }
 
-
+  bool matchesEol() const { return m_matchesEol; }
 
 private:
   void makeClosure();
   void computeSignature();
   void postBuild();
+  void computeMatchesEol();
 };
 
 

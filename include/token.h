@@ -49,8 +49,7 @@ class BaseTokenizer {
 protected:
   std::vector<Token> m_tokens;
   bool m_read;
-  std::vector<std::pair<Token::Position, int> > m_lines;
-  // <position of the first token of the line, line number (first line => 1)>
+  std::vector<Token::Position> m_lines; // position of first token of each line
   int m_lineCount;
   bool m_newLine;
 
@@ -86,14 +85,11 @@ protected:
 class StringTokenizer : public BaseTokenizer {
   std::string m_buffer;
 public:
-  StringTokenizer(const std::string &buffer) : m_buffer(buffer) { 
-    readLine(m_buffer); 
-  }
+  StringTokenizer(const std::string &buffer);
   ~StringTokenizer() {}
 
   void dumpPosition(std::ostream &out, Token::Position tokenPosition) const;  
 
-  void foobar();
 };
 
 

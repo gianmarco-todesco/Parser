@@ -36,6 +36,9 @@
     <ClCompile Include="..\..\..\test\grammarbuilder_test.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\test\parser_test2.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\test\catch.hpp">

@@ -15,9 +15,18 @@ Parser::Parser(const Grammar *grammar)
   , m_parseTree(0)
   , m_tokenizer(0)
   , m_skipNewLines(false)
+  , m_trace(false)
 {
 }
 
+std::string p(const Token &token)
+{
+  if(token.isEof()) return "EOF";
+  else if(token.isEol()) return "EOL";
+  else if(token.getType() == Token::T_Ident || token.getType() == Token::T_Special || token.getType() == Token::T_Number) return "'" + token.getText() + "'";
+  else if(token.getType() == Token::T_QuotedString) return "q" + token.getText();
+  else return "?" + token.getText() + "?";
+}
 
 bool Parser::parse(const BaseTokenizer *tokenizer)
 {
@@ -32,15 +41,18 @@ bool Parser::parse(const BaseTokenizer *tokenizer)
   bool ret = false;
   for(;;)
   {
+    const ParserState*state = m_stack.back();
+
     if(m_skipNewLines)
-      skipNewLinesAndComments(tokens, pos);
+      skipNewLinesAndComments(tokens, pos, state->matchesEol() ? 1 : 0);
 
     const Token &token = tokens[pos] ;
 
-    const ParserState*state = m_stack.back();
     vector<const Rule*> completedRules;
     vector<const TerminalSymbol*> terminals;
     state->getCompleteRules(completedRules, token);
+
+    
     state->getTerminals(terminals, token);
     
     if(terminals.size()>0)
@@ -60,7 +72,13 @@ bool Parser::parse(const BaseTokenizer *tokenizer)
       assert(nextState);
       m_stack.push_back(nextState);
       m_parseTree->addLeaf(pos);
-      //cout << "Shift " << tokens[pos] << endl;
+      if(m_trace) 
+      {
+        cout << "Shift " << p(tokens[pos]);
+        if(!terminals[0]->isConstant()) 
+          cout << " (" << terminals[0]->getName() << ")" ;
+        cout << endl;
+      }
       if(!tokens[pos].isEof()) pos++;
     }
     else if(completedRules.size()>0)
@@ -75,7 +93,7 @@ bool Parser::parse(const BaseTokenizer *tokenizer)
       const Rule *rule;      
       rule = completedRules[0];
 
-      //cout << "Reduce " << *rule << endl;
+      if(m_trace) cout << "Reduce " << *rule << endl;
       doSemanticAction(rule);
 
       for(int i=0;i<rule->getLength();i++) m_stack.pop_back();
@@ -92,7 +110,9 @@ bool Parser::parse(const BaseTokenizer *tokenizer)
     {
       cout << "Syntax error" << endl;
       cout << "expected one of:";
-      for(int i=0;i<(int)terminals.size();i++) cout << terminals[i]->getName() << " ";
+      vector<const TerminalSymbol*> expected;
+      state->getExpected(expected);
+      for(int i=0;i<(int)expected.size();i++) cout << expected[i]->getName() << " ";
       cout << endl;
       cout << "Found " << tokenizer->getTokens()[pos] << endl;
       tokenizer->dumpPosition(cout, pos);
@@ -155,7 +175,7 @@ void Parser::doSemanticAction(const Rule *rule)
 }
 
 
-void Parser::skipNewLinesAndComments(const std::vector<Token> &tokens, int &pos)
+void Parser::skipNewLinesAndComments(const std::vector<Token> &tokens, int &pos, int flags)
 {
   const Token slash(Token::T_Special, "/");
   const Token star(Token::T_Special, "*");
@@ -163,7 +183,7 @@ void Parser::skipNewLinesAndComments(const std::vector<Token> &tokens, int &pos)
 
   while(pos < n)
   {
-    if(tokens[pos].isEol()) pos++;
+    if(flags == 0 && tokens[pos].isEol()) pos++;
     else if(pos+1<n && tokens[pos] == slash)
     {
       if(tokens[pos+1] == slash) 

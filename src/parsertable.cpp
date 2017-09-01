@@ -8,6 +8,8 @@ using namespace std;
 
 ParserState::ParserState(const Grammar *g)
   : m_grammar(g)
+  , m_matchesEol(false)
+  , m_id(-1)
 {
   assert(g);
   assert(g->getRuleCount()>1);
@@ -20,6 +22,8 @@ ParserState::ParserState(const Grammar *g)
 
 ParserState::ParserState(const ParserState &other, const Symbol *symbol)
   : m_grammar(other.m_grammar)
+  , m_matchesEol(false)
+  , m_id(-1)
 {
   map<RuleIndexAndDot, LookAhaedSet >::const_iterator itemIt;
   for(itemIt = other.m_items.begin(); itemIt != other.m_items.end(); ++itemIt)
@@ -157,6 +161,26 @@ void ParserState::postBuild()
   {
     
   }
+
+  // compute m_matchesEol
+  const TerminalSymbol *eolSymbol = m_grammar->symbols().getEolTerminalSymbol();
+  if(find(m_currentTerminals.begin(), m_currentTerminals.end(), eolSymbol) 
+     != m_currentTerminals.end())
+     m_matchesEol = true;
+  else
+  {
+    for(vector<pair<const Rule*, LookAhaedSet> >::const_iterator it = m_completeRules.begin();
+      it != m_completeRules.end(); ++it)
+    {
+      const LookAhaedSet &la = it->second;
+      if(la.find(eolSymbol) != la.end()) 
+      { 
+        m_matchesEol = true; 
+        break; 
+      }
+    }
+  }
+
 }
 
 void ParserState::dump() const
@@ -200,6 +224,22 @@ int ParserState::getCompleteRules(vector<const Rule*> &rules, const Token &token
     }
   }
   return (int)rules.size();
+}
+
+int ParserState::getExpected(std::vector<const TerminalSymbol*> &expected) const
+{
+  for(vector<const TerminalSymbol*>::const_iterator it = m_currentTerminals.begin();
+      it != m_currentTerminals.end(); ++it) 
+    expected.push_back(*it);
+  for(vector<pair<const Rule*, LookAhaedSet> >::const_iterator it = m_completeRules.begin();
+      it != m_completeRules.end(); ++it)
+  {
+    for(LookAhaedSet::const_iterator j = it->second.begin(); j != it->second.end(); ++j)
+    {
+      expected.push_back(*j);
+    }
+  }
+  return expected.size();
 }
 
 

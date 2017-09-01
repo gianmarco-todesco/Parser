@@ -26,7 +26,6 @@ TEST_CASE( "grammar builder 1", "[grammarbuilder]") {
     // g->dump(cout);
 
     StringTokenizer st2("x y z z");
-    st2.foobar();
     Parser parser(g);
     bool ret = parser.parse(&st2);
     REQUIRE(ret);
@@ -59,7 +58,6 @@ TEST_CASE( "grammar builder 2", "[grammarbuilder]") {
 
     
     StringTokenizer st2("x x z x x");
-    st2.foobar();
     Parser parser(g);
     bool ret = parser.parse(&st2);
     REQUIRE(ret);

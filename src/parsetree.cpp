@@ -22,6 +22,7 @@ void ParseTree::addLeaf(int tokenIndex)
   m_buffer.push_back(tokenIndex);
 }
 
+/*
 // remove count elements from the stack; remove them also from the buffer
 void ParseTree::removeItems(int count)
 {
@@ -30,6 +31,7 @@ void ParseTree::removeItems(int count)
   m_stack.erase(m_stack.end()-count,m_stack.end());
   m_buffer.erase(m_buffer.begin()+k, m_buffer.end());
 }
+*/
 
 // replace count elements from the stack with the index-th last element; update the buffer
 void ParseTree::takeOne(int count, int index)
@@ -185,7 +187,13 @@ namespace {
     if(node.isLeaf())
     {
       Token token = node.getToken();
-      ss << "'" << token.getText() << "'";
+      if(token.isEof()) ss << "EOF";
+      else if(token.isEol()) ss << "EOL";
+      else if(token.getType() == Token::T_Ident || token.getType() == Token::T_Special)
+        ss << "'" << token.getText() << "'";
+      else if(token.getType() == Token::T_Number) ss << token.getText();
+      else if(token.getType() == Token::T_QuotedString) ss << "q" << token.getText();
+      else ss << "?" << token.getText() << "?";
     }
     else
     {
@@ -238,5 +246,34 @@ void ParseTree::dump(ostream &out) const
   for(int i=0;i<(int)m_stack.size();i++)
   {
     ::dump(out, 0, getNode(i));
+  }
+}
+
+
+std::string ParseNode::toString() const
+{
+  ostringstream ss;
+  serialize(ss, *this);
+  return ss.str();
+}
+
+std::string ParseNode::getText(bool includeLeadingSpace) const
+{
+  if(isLeaf())
+  {
+    Token token = getToken();
+    string ls = includeLeadingSpace ? token.getSpaces() : ""; 
+    if(token.isEol()) return ls + "\n";
+    else return ls + token.getText();
+  }
+  else
+  {
+    ostringstream ss;
+    for(int i=0;i<getChildCount();i++)
+    {
+      string childText = getChild(i).getText(includeLeadingSpace || i>0);
+      ss << childText.c_str();
+    }
+    return ss.str();
   }
 }

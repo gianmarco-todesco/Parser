@@ -72,7 +72,11 @@ class TextTerminalSymbol : public TerminalSymbol {
   friend class SymbolPool;
 public:
   bool isConstant() const { return true; }
-  bool matches(const Token &token) const { return token.getText() == m_text; }
+  bool matches(const Token &token) const { 
+    return m_text != "" && token.getText() == m_text; 
+  }
+  // note: a TextTerminalSymbol("") should not exist. Anyway it must match nothing
+  // (it could match EOF and that would be bad)
   int getConstantStrength() const { return 10; }
 protected:
   TextTerminalSymbol(const std::string &text) : TerminalSymbol("'"+text+"'"), m_text(text) {}
@@ -93,23 +97,6 @@ protected:
   TokenTypeTerminalSymbol(const std::string &name, Token::Type type) : TerminalSymbol(name), m_type(type) {}
 };
 
-/*
-
-class KeywordsTerminalSymbol : public TerminalSymbol {
-  std::vector<std::string> m_keywords;
-public:
-  KeywordsTerminalSymbol(const std::vector<std::string> &keywords);
-  KeywordsTerminalSymbol(const std::string &kw1, const std::string &kw2);
-  KeywordsTerminalSymbol(const std::string &kw1, const std::string &kw2, const std::string &kw3);
-  KeywordsTerminalSymbol(const std::string &kw1, const std::string &kw2, const std::string &kw3, const std::string &kw4);
-  bool isConstant() const { return m_keywords.size() == 1; }
-  bool matches(const Token &token) const;
-  int getConstantStrength() const { return 8; }
-
-private:
-  void buildName();
-};
-*/
 
 //
 // AnyTerminalSymbol
@@ -119,7 +106,7 @@ class AnyTerminalSymbol : public TerminalSymbol {
 public:
   virtual ~AnyTerminalSymbol() {}
   bool isConstant() const { return false; }
-  bool matches(const Token &) const { return true; }
+  bool matches(const Token &token) const { return !token.isEof(); }
   int getConstantStrength() const { return 1; }
 protected:
   AnyTerminalSymbol() : TerminalSymbol("any") {}
@@ -131,7 +118,7 @@ protected:
 class SymbolPool {
   std::map<std::string, NonTerminalSymbol*> m_ntSymbols;
   std::map<std::string, TerminalSymbol*> m_tSymbols;
-  TerminalSymbol *m_eof;
+  TerminalSymbol *m_eof, *m_eol;
 public:
   SymbolPool();
   ~SymbolPool();
@@ -143,7 +130,7 @@ public:
   const TerminalSymbol* getNumberTerminalSymbol()  { return getTokenTypeTerminalSymbol("number", Token::T_Number); }
   const TerminalSymbol* getQuotedStringTerminalSymbol()  { return getTokenTypeTerminalSymbol("qstring", Token::T_QuotedString); }
   const TerminalSymbol* getSpecialTerminalSymbol()  { return getTokenTypeTerminalSymbol("special", Token::T_Special); }
-  const TerminalSymbol* getEolTerminalSymbol() { return getTokenTypeTerminalSymbol("EOL", Token::T_Eol); }
+  const TerminalSymbol* getEolTerminalSymbol() const { return m_eol; }
   const TerminalSymbol* getEofTerminalSymbol() const { return m_eof; }
   const TerminalSymbol* getAnyTerminalSymbol();
 

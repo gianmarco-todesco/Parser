@@ -96,6 +96,10 @@ Grammar *GrammarBuilder::build(BaseTokenizer *tokenizer)
         {
           symbols.push_back(grammar->symbols().getAnyTerminalSymbol());
         }
+        else if(item.getToken().getText() == "eol")
+        {
+          symbols.push_back(grammar->symbols().getEolTerminalSymbol());
+        }
         else
           symbols.push_back(grammar->symbols().nt(item.getToken().getText()));
       }
@@ -117,12 +121,21 @@ Grammar *GrammarBuilder::build(BaseTokenizer *tokenizer)
       if(action.getChildCount()==2)
       {
         ParseNode argLst = action.getChild(1);
-        for(int i=0;i<argLst.getChildCount();i++)
+        if(argLst.isLeaf())
         {
-          ParseNode arg = argLst.getChild(i);
-          string v = arg.getToken().getText();
+          string v = argLst.getToken().getText();
           int k = stoi(v, 0) - 1;
           mask |= 1<<k;
+        }
+        else
+        {
+          for(int i=0;i<argLst.getChildCount();i++)
+          {
+            ParseNode arg = argLst.getChild(i);
+            string v = arg.getToken().getText();
+            int k = stoi(v, 0) - 1;
+            mask |= 1<<k;
+          }
         }
       }
       ruleAction = RuleAction(actionName, mask);
