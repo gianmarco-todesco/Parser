@@ -78,36 +78,53 @@ Grammar *GrammarBuilder::build(BaseTokenizer *tokenizer)
     for(int j=0; j<right.getChildCount(); j++) 
     {      
       ParseNode item = right.getChild(j);
-      if(item.getToken().getType() == Token::T_Ident) 
+      Token token = item.getToken();
+      if(token.getType() == Token::T_Ident) 
       {
-        if(item.getToken().getText() == "ident")
+        string text = token.getText();
+        if(text == "ident")
         {
           symbols.push_back(grammar->symbols().getIdentTerminalSymbol());
         }
-        else if(item.getToken().getText() == "int")
+        else if(text == "int")
         {
           symbols.push_back(grammar->symbols().getNumberTerminalSymbol());
         }
-        else if(item.getToken().getText() == "qstring")
+        else if(text == "qstring")
         {
           symbols.push_back(grammar->symbols().getQuotedStringTerminalSymbol());
         }
-        else if(item.getToken().getText() == "any")
+        else if(text == "any")
         {
           symbols.push_back(grammar->symbols().getAnyTerminalSymbol());
         }
-        else if(item.getToken().getText() == "eol")
+        else if(text == "eol")
         {
           symbols.push_back(grammar->symbols().getEolTerminalSymbol());
         }
+        else if(text != "")
+        {
+          symbols.push_back(grammar->symbols().nt(text));
+        }
         else
-          symbols.push_back(grammar->symbols().nt(item.getToken().getText()));
+        {
+          assert(false);
+        }
+      }
+      else if(token.getType() == Token::T_QuotedString)
+      {
+        string text = item.getToken().getText();
+        if(text.length()>=2 && text[0]==text.back())
+          text = text.substr(1,text.length()-2);
+        else
+        {
+          assert(false);
+        }
+        symbols.push_back(grammar->symbols().t(text));
       }
       else
       {
-        string text = item.getToken().getText();
-        text = text.substr(1,text.length()-2);
-        symbols.push_back(grammar->symbols().t(text));
+        assert(false);
       }
     }
 

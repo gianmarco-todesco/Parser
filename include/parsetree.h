@@ -12,18 +12,16 @@ class ParseTree {
   std::map<std::string, int> m_nodeTagTable;
   std::vector<int> m_buffer;
   std::vector<int> m_stack;
+
 public:
   ParseTree(const BaseTokenizer *tokenizer);
   ~ParseTree();
 
   void addLeaf(int tokenIndex); 
-  // note: normally leaf are added consecutively, but comments can be skipped. This is why we need an argument
+  
 
   void makeNode(const std::string &tag, int count, unsigned long mask = 0xffffffffL);
   void takeOne(int count, int index);
-  /*
-  void removeItems(int count);
-  */
 
   int getStackSize() const { return (int)m_stack.size(); }
 
@@ -36,10 +34,10 @@ public:
   int getChildCount(const ParseNode &node) const;
   Token getToken(const ParseNode &node) const;
 
-  /*
-  ParseOutputNode getChildNode(const ParseOutputNode &node, int childIndex) const;
-  */
+  const BaseTokenizer *getTokenizer() const { return m_tokenizer; }
 
+  std::pair<Token::Position, Token::Position> getTokensRange(const ParseNode &node) const;
+  
   std::string toString() const; // used mainly for debugging
   void dump(std::ostream &out) const;
 };

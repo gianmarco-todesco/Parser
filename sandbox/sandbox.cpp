@@ -30,6 +30,48 @@ void end()
   cout << "Elapsed time = " << elapsedTime << endl;
 }
 
+
+void benchmark1()
+{
+  start();
+  Grammar *g = 0;
+  FileTokenizer ft;
+  if(ft.read("data/cgrammar.txt"))
+  {
+    GrammarBuilder gb;
+    g = gb.build(&ft);
+    end();
+  }
+  if(g)
+  {
+    Parser parser(g);
+    parser.setSkipNewLines(true);
+    if(ft.read("data/test1_10.c"))
+    {
+      end();
+      bool ret = parser.parse(&ft);
+      end();
+      if(ret) 
+      {
+          cout << "Success!!!!" << endl;
+          ParseNode root = parser.getParseTree()->getNode(0);
+          cout << "  root tag = " << root.getTag() << endl;
+          int n = root.getChildCount();
+          cout << "  root child count = " << n << endl;
+          for(int i=n-5;i<n;i++)
+          {
+            cout << "  child(" << i << " : " << root.getChild(i).toString() << endl;
+            cout << "  " << root.getChild(i).getText() << endl;
+          }
+          
+      }
+      end(); // release: 155ms
+    }
+    delete g;
+  }
+}
+
+
 #ifdef CICCIO
 int main2()
 {
@@ -535,7 +577,7 @@ int main10()
 
 #endif
 
-int main()
+int main11()
 {
   start();
   FileTokenizer ft;
@@ -551,5 +593,11 @@ int main()
 
   ft.dumpPosition(cout, 1234);
 
+  return 0;
+}
+
+int main()
+{
+  benchmark1();
   return 0;
 }
