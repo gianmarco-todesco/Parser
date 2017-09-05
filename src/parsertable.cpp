@@ -84,6 +84,7 @@ void computeNewLookahaedSet(
 void ParserState::makeClosure()
 {
   vector<RuleIndexAndDot> todo;
+  // collect all rules A -> xx @ C yy
   map<RuleIndexAndDot, LookAhaedSet >::iterator itemIt;
   for(itemIt = m_items.begin(); itemIt != m_items.end(); ++itemIt)
   {
@@ -94,9 +95,12 @@ void ParserState::makeClosure()
   }
   while(!todo.empty())
   {
+    // rid = A -> xx @ C yy
     RuleIndexAndDot rid = todo.back(); todo.pop_back();
+    
     LookAhaedSet newSet;
     computeNewLookahaedSet(newSet, m_grammar, rid, m_items[rid]);
+    // newSet = FIRST( yy old_la ) 
 
     string ntName = m_grammar->getRule(rid.first)->getRightSymbol(rid.second)->getName();
     vector<const Rule*> rules;
@@ -151,7 +155,8 @@ void ParserState::postBuild()
     else if(rule->getRightSymbol(dotPos)->isTerminal()) 
     {
       const TerminalSymbol *t = dynamic_cast<const TerminalSymbol *>(rule->getRightSymbol(dotPos));
-      m_currentTerminals.push_back(t);
+      if(find(m_currentTerminals.begin(), m_currentTerminals.end(), t) == m_currentTerminals.end())
+        m_currentTerminals.push_back(t);
     }
   }
   sort(m_currentTerminals.begin(), m_currentTerminals.end(), GreaterThanTerminal());
@@ -183,24 +188,26 @@ void ParserState::postBuild()
 
 }
 
-void ParserState::dump() const
+void ParserState::dump(std::ostream &out) const
 {
-  cout << "S" << getId() << endl;
+  out << "S" << getId();
+  if(isAmbiguous()) out << " (Ambiguous!)";
+  out << endl;
   map<RuleIndexAndDot, LookAhaedSet >::const_iterator itemIt;
   for(itemIt = m_items.begin(); itemIt != m_items.end(); ++itemIt)
   {
-    cout 
+    out 
       << "  " 
       << make_pair(*m_grammar->getRule(itemIt->first.first), itemIt->first.second) 
       << ", {";
     for(LookAhaedSet::const_iterator it = itemIt->second.begin(); it != itemIt->second.end(); ++it)
     {
-      if(it != itemIt->second.begin()) cout << ", ";
-      cout << " " << **it ;
+      if(it != itemIt->second.begin()) out << ", ";
+      out << " " << **it ;
     }
-    cout << " }" << endl;
+    out << " }" << endl;
   }
-  cout << endl;
+  out << endl;
 }
 
 int ParserState::getTerminals(vector<const TerminalSymbol*> &terminals, const Token &token) const
@@ -242,6 +249,26 @@ int ParserState::getExpected(std::vector<const TerminalSymbol*> &expected) const
   return expected.size();
 }
 
+bool ParserState::isAmbiguous() const
+{
+  set<const TerminalSymbol*> used;
+  for(vector<const TerminalSymbol*>::const_iterator it = m_currentTerminals.begin();
+      it != m_currentTerminals.end(); ++it) 
+  {
+    assert(used.find(*it) == used.end());
+    used.insert(*it);
+  }
+  for(vector<pair<const Rule*, LookAhaedSet> >::const_iterator it = m_completeRules.begin();
+      it != m_completeRules.end(); ++it)
+  {
+    for(LookAhaedSet::const_iterator j = it->second.begin(); j != it->second.end(); ++j)
+    {
+      if(used.find(*j)!=used.end()) return true;
+      used.insert(*j);
+    }
+  }
+  return false;
+}
 
 
 //=============================================================================
@@ -321,4 +348,18 @@ void ParserTable::build()
   for(int i=0;i<(int)m_states.size();i++) m_states[i]->postBuild();
 }
 
+
+void ParserTable::dump(std::ostream &out) const
+{
+  for(int i=0;i<(int)m_states.size();i++) 
+    m_states[i]->dump(out);
+}
+
+
+bool ParserTable::isAmbiguous() const
+{
+  for(int i=0;i<(int)m_states.size();i++) 
+    if(m_states[i]->isAmbiguous()) return true;
+  return false;
+}
 

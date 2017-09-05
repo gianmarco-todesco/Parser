@@ -1,3 +1,5 @@
+#include <windows.h>
+
 #include "../include/parser.h"
 #include "../include/grammarbuilder.h"
 
@@ -6,6 +8,7 @@
 #include <sstream>
 #include <vector>
 #include <algorithm>
+#include <assert.h>
 
 using namespace std;
 
@@ -29,6 +32,37 @@ void end()
   elapsedTime = (t2.QuadPart - t1.QuadPart) * 1000.0 / frequency.QuadPart;
   cout << "Elapsed time = " << elapsedTime << endl;
 }
+
+void dir(vector<string> &files, vector<string> &subfolder, const string &folder)
+{
+  string search_path = folder + "/*.*";
+  WIN32_FIND_DATAA fd; 
+  HANDLE hFind = ::FindFirstFileA(search_path.c_str(), &fd); 
+  if(hFind == INVALID_HANDLE_VALUE) return;
+  do 
+  { 
+    string fn(fd.cFileName);
+    if(fn != "" && fn[0]!='.')
+    {
+      fn = folder + "\\" + fn;
+      if(fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) subfolder.push_back(fn);
+      else files.push_back(fn);
+    }
+  } while(::FindNextFileA(hFind, &fd)); 
+  ::FindClose(hFind); 
+}
+
+void rdir(vector<string> &files, const string &folder)
+{
+  vector<string> subfolders;
+  dir(files,subfolders,folder);
+  for(vector<string>::iterator it = subfolders.begin(); it != subfolders.end(); ++it)
+  {
+    rdir(files, *it);
+  }
+}
+
+
 
 
 void benchmark1()
@@ -69,6 +103,192 @@ void benchmark1()
     }
     delete g;
   }
+}
+
+
+
+
+void benchmark2()
+{
+  start();
+  Grammar *g = 0;
+  FileTokenizer ft;
+  if(ft.read("data/cgrammar.txt"))
+  {
+    GrammarBuilder gb;
+    g = gb.build(&ft);
+    end();
+  }
+  if(!g) return;
+
+  Parser parser(g);
+  parser.setSkipNewLines(true);
+  if(parser.getParseTable().isAmbiguous())
+  {
+    const ParserTable &tb = parser.getParseTable();
+    for(int i=0;i<tb.getStateCount();i++)
+      if(tb.getState(i)->isAmbiguous())
+        tb.getState(i)->dump(cout);
+    delete g;
+    return;
+  }
+
+  vector<string>files;
+  rdir(files,"C:\\shared\\TargetIT\\test2\\fadc_src\\PI_FAdC950_VPA-1.0");
+  for(int i=0;i<(int)files.size();i++)
+  {
+    string fn = files[i];
+    if(fn.length()>2 && fn.substr(fn.length()-2)==".c" || fn.substr(fn.length()-2)==".h")
+    {
+      cout << fn << endl;
+    }
+    else
+    {
+      cout << "***uffa***:" << fn << endl; 
+      continue;
+    }
+    bool ret = ft.read(fn) ? parser.parse(&ft) : false;
+    cout << "ret = " << ret << endl;
+    if(!ret) break;
+    // break;
+  }
+  /*
+    if(ft.read("data/test1_10.c"))
+    {
+      end();
+      bool ret = parser.parse(&ft);
+      end();
+      if(ret) 
+      {
+          cout << "Success!!!!" << endl;
+          ParseNode root = parser.getParseTree()->getNode(0);
+          cout << "  root tag = " << root.getTag() << endl;
+          int n = root.getChildCount();
+          cout << "  root child count = " << n << endl;
+          for(int i=n-5;i<n;i++)
+          {
+            cout << "  child(" << i << " : " << root.getChild(i).toString() << endl;
+            cout << "  " << root.getChild(i).getText() << endl;
+          }
+          
+      }
+      end(); // release: 155ms
+    }
+    delete g;
+  }
+  */
+  cout << "end:"; end();
+  delete g;
+}
+
+
+Grammar *makeGrammar()
+{
+  start();
+  Grammar *g = 0;
+  FileTokenizer ft;
+  if(ft.read("data/cgrammar.txt"))
+  {
+    GrammarBuilder gb;
+    g = gb.build(&ft);
+    end();
+  }
+  if(!g) return 0;
+  Parser parser(g);
+  parser.setSkipNewLines(true);
+  if(parser.getParseTable().isAmbiguous())
+  {
+    const ParserTable &tb = parser.getParseTable();
+    for(int i=0;i<tb.getStateCount();i++)
+      if(tb.getState(i)->isAmbiguous())
+        tb.getState(i)->dump(cout);
+    delete g;
+    return 0;
+  }
+  return g;
+}
+
+void benchmark3()
+{
+  Grammar *g = makeGrammar();
+  if(!g) return;
+  Parser parser(g);
+  parser.setSkipNewLines(true);
+
+  string fn = "C:\\shared\\TargetIT\\test2\\fadc_src\\PI_FAdC950_VPA-1.0\\PI_FAdC950_VPA\\distribution\\include\\fseIPUObjectValuesA.h";
+  FileTokenizer ft;
+  if(ft.read(fn))
+  {
+    start();
+    cout << "Start parsing" << endl;
+    bool ret = parser.parse(&ft);
+    cout << "Done "; end();
+    if(ret)
+    {
+      ParseNode root = parser.getParseTree()->getNode(0);
+      assert(root.getTag() == "StmLst");
+      for(int i=0;i<root.getChildCount();i++)
+      {
+        ParseNode stm = root.getChild(i);
+        string tag = stm.getTag();
+        if(stm.getTag() == "Typedef")
+        {
+          cout << stm.toString() << endl;
+        }
+      }
+    }
+  }
+  delete g;
+}
+
+void smalltest()
+{
+  start();
+  Grammar *g = 0;
+  FileTokenizer ft;
+  if(ft.read("data/cgrammar.txt"))
+  {
+    GrammarBuilder gb;
+    g = gb.build(&ft);
+    end();
+  }
+  if(!g) return;
+
+  Parser parser(g);
+  parser.setSkipNewLines(true);
+  if(parser.getParseTable().isAmbiguous())
+  {
+    const ParserTable &tb = parser.getParseTable();
+    for(int i=0;i<tb.getStateCount();i++)
+      if(tb.getState(i)->isAmbiguous())
+        tb.getState(i)->dump(cout);
+    delete g;
+    return;
+  }
+
+  cout << "Parser ready: "; end();
+
+  string text = "struct { int x,y,z; char buffer[SIZE]; } pippo;";
+  // string text = "extern static const int x,*y[10],z(); void foobar() {}";
+  //
+  //string text = "typedef char *(*(**foo[][8])())[];";
+  // "typedef extern const char *x[];
+
+  StringTokenizer st(text);
+  bool ret = parser.parse(&st);
+  if(ret)
+  {
+    parser.getParseTree()->dump(cout);
+  }
+  cout << "end:"; end();
+  delete g;
+}
+
+void foo()
+{
+  int *(a[10]);
+  *(a[2]) = 3;
+
 }
 
 
@@ -598,6 +818,7 @@ int main11()
 
 int main()
 {
-  benchmark1();
+  benchmark2();
+  // smalltest();
   return 0;
 }

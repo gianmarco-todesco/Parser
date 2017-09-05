@@ -117,7 +117,7 @@ bool Parser::parse(const BaseTokenizer *tokenizer)
       cout << "Found " << tokenizer->getTokens()[pos] << endl;
       tokenizer->dumpPosition(cout, pos);
 
-      state->dump();
+      state->dump(cout);
 
       break;
     }    

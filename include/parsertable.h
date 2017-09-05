@@ -39,7 +39,7 @@ public:
 
   // const std::vector<LalrItem> &getItems() const { return m_items; }
 
-  void dump() const;
+  void dump(std::ostream &out) const;
 
   //const std::vector<const Symbol*> &getCurrentSymbols() const { return m_currentSymbols; }
   const std::vector<const TerminalSymbol*> &getCurrentTerminals() const { return m_currentTerminals; }
@@ -58,6 +58,8 @@ public:
   }
 
   bool matchesEol() const { return m_matchesEol; }
+
+  bool isAmbiguous() const;
 
 private:
   void makeClosure();
@@ -78,7 +80,8 @@ public:
   const ParserState*getState(int index) const { return m_states[index]; }
   const ParserState*getFirstState() const { return m_states[0]; }
   
-  void dump() const;
+  void dump(std::ostream &out) const;
+  bool isAmbiguous() const;
 
 private:
   void build();

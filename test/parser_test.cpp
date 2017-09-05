@@ -423,3 +423,31 @@ TEST_CASE( "Parser6", "[parser]") {
   // cout << root.toString() << endl;
 }
 
+TEST_CASE( "Parser7", "[parser]") {
+  Grammar g;
+  RuleBuilder(&g,"S").t("p").n("L").end(RuleAction("p",2));
+  RuleBuilder(&g,"L").n("A").end(RuleAction("L"));
+  RuleBuilder(&g,"L").n("L").n("A").end(RuleAction("L",1+2));
+  RuleBuilder(&g,"A").t("x").end(RuleAction("V",1));
+  RuleBuilder(&g,"A").t("y").end(RuleAction("V",1));
+  RuleBuilder(&g,"A").t("z").end(RuleAction("V",1));
+
+  Parser parser(&g);
+  StringTokenizer st("p x y");
+  
+  bool ret = parser.parse(&st);
+  REQUIRE(ret);
+  ParseNode root = parser.getParseTree()->getNode(0);
+  REQUIRE(root.getTag()=="p");
+  REQUIRE(root.getChildCount()==1);
+  ParseNode L = root.getChild(0);
+  REQUIRE(L.getTag()=="L");
+  REQUIRE(L.getChildCount()==2);
+
+  REQUIRE(L.getChild(0).getText() == "x");
+  REQUIRE(L.getChild(0).toString() == "V('x')");
+  REQUIRE(L.getChild(1).getText() == "y");
+  REQUIRE(L.getChild(1).toString() == "V('y')");
+  
+
+}

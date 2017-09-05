@@ -55,7 +55,7 @@ void ParseTree::makeNode(const std::string &tag, int count, unsigned long mask)
     {
       tokenIndex = m_buffer[j+2];
       if(tokenIndex<ta) ta = tokenIndex; 
-      else if(tokenIndex>tb) tb = tokenIndex;
+      if(tokenIndex>tb) tb = tokenIndex;
     }
     else
     {
@@ -381,7 +381,7 @@ std::string ParseNode::getText(bool includeLeadingSpace) const
     for(int i=range.first;i<=range.second;i++)
     {
       Token token = m_parseTree->getTokenizer()->getTokens()[i];
-      if(includeLeadingSpace || i>0) ss << token.getSpaces();
+      if(includeLeadingSpace || i>range.first) ss << token.getSpaces();
       if(token.isEol()) ss << "\n";
       else ss << token.getText();
     }

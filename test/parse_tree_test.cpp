@@ -30,3 +30,44 @@ TEST_CASE( "Parse tree 1", "[parsetree]") {
 
   //tree.dump(cout);
 }
+
+
+TEST_CASE( "Parse tree 2", "[parsetree]") {
+  StringTokenizer st("p x y");
+  ParseTree tree(&st);
+  tree.addLeaf(0);
+  tree.addLeaf(1);
+  tree.makeNode("V",1);
+  tree.makeNode("A",1);
+  tree.addLeaf(2);
+  tree.makeNode("V",1);
+  tree.makeNode("A",2);
+  tree.makeNode("S",2,0x2);
+
+  REQUIRE(tree.getStackSize() == 1);
+  REQUIRE(tree.toString() == "S(A(V('x'),V('y')))");
+  ParseNode root = tree.getNode(0);
+  REQUIRE(root.getTag() == "S" );
+  REQUIRE(root.toString() == tree.toString() );
+  REQUIRE(root.getText() == "p x y");
+  REQUIRE(root.getChildCount() == 1);
+  ParseNode A = root.getChild(0);
+  REQUIRE(A.getTag() == "A" );
+  REQUIRE(A.toString() == "A(V('x'),V('y'))" );
+  REQUIRE(A.getText() == "x y" );
+  REQUIRE(A.getChildCount() == 2 );
+  ParseNode V = A.getChild(0);
+  REQUIRE(V.getTag() == "V" );
+  REQUIRE(V.toString() == "V('x')" );
+  REQUIRE(V.getText() == "x" );
+  REQUIRE(V.getChildCount() == 1 );
+  REQUIRE(V.getChild(0).toString() == "'x'");
+  V = A.getChild(1);
+  REQUIRE(V.getTag() == "V" );
+  REQUIRE(V.toString() == "V('y')" );
+  REQUIRE(V.getText() == "y" );
+  REQUIRE(V.getChildCount() == 1 );
+  REQUIRE(V.getChild(0).toString() == "'y'");
+  
+  
+}

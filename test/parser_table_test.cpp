@@ -1,6 +1,7 @@
 #include "parsertable.h"
 #include "catch.hpp"
 #include <sstream>
+#include <iostream>
 
 using namespace std;
 
@@ -58,3 +59,28 @@ TEST_CASE( "ParserTable 3", "[parsertable]") {
   }
   
 }
+
+
+TEST_CASE( "ParserTable 4", "[parsertable]") {
+  Grammar g;
+  RuleBuilder(&g,"S").n("A").t("a").end();
+  RuleBuilder(&g,"S").n("B").t("b").end();
+  RuleBuilder(&g,"A").t("c").end();
+  RuleBuilder(&g,"B").t("c").end();
+  ParserTable table(&g);
+  // table.dump(cout);
+  REQUIRE(table.isAmbiguous() == false);  
+}
+
+
+TEST_CASE( "ParserTable 5", "[parsertable]") {
+  Grammar g;
+  RuleBuilder(&g,"S").t("i").n("S").end();
+  RuleBuilder(&g,"S").t("i").n("S").t("e").n("S").end();
+  RuleBuilder(&g,"S").t("p").end();
+  ParserTable table(&g);
+  // table.dump(cout);
+  REQUIRE(table.isAmbiguous() == true);  
+}
+
+
